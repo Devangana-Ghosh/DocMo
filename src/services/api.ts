@@ -441,6 +441,18 @@ export async function fetchLabReports() {
   return (data ?? []) as LabReport[];
 }
 
+export async function fetchLabReportsByPatient(patientId: string) {
+  await requireSession();
+  const { data, error } = await supabase
+    .from('lab_reports')
+    .select('*, uploaded_by_profile:profiles!lab_reports_uploaded_by_fkey(id, full_name, role)')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new ApiError(error.message);
+  return (data ?? []) as LabReport[];
+}
+
 export async function submitContactMessage(message: Omit<ContactMessage, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('contact_messages')
@@ -453,6 +465,14 @@ export async function submitContactMessage(message: Omit<ContactMessage, 'id' | 
 }
 
 export async function getLabReportPublicUrl(filePath: string) {
+  const signed = await supabase.storage
+    .from('lab-reports')
+    .createSignedUrl(filePath, 60 * 60);
+
+  if (!signed.error && signed.data?.signedUrl) {
+    return signed.data.signedUrl;
+  }
+
   const { data } = supabase.storage.from('lab-reports').getPublicUrl(filePath);
   return data.publicUrl;
 }

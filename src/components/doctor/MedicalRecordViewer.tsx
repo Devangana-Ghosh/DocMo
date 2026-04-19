@@ -1,8 +1,9 @@
 import React from 'react';
-import { X, FileText, Pill, History, CalendarClock, FlaskConical } from 'lucide-react';
+import { X, FileText, Pill, History, CalendarClock, FlaskConical, Eye } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Patient } from './PatientCard';
 import type { Appointment, LabReport, MedicalDocument, Prescription } from '../../types/backend';
+import { getLabReportPublicUrl } from '../../services/api';
 interface MedicalRecordViewerProps {
   patient: Patient;
   isOpen: boolean;
@@ -26,6 +27,11 @@ export function MedicalRecordViewer({
   const recentAppointments = record.appointments.slice(0, 5);
   const recentDocuments = record.documents.slice(0, 6);
   const recentLabReports = record.labReports.slice(0, 6);
+
+  const handleViewLabReport = async (report: LabReport) => {
+    const url = await getLabReportPublicUrl(report.file_path);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   return <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
       <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -102,12 +108,24 @@ export function MedicalRecordViewer({
                 </h3>
                 {recentLabReports.length === 0 ? <p className="text-gray-500">No lab reports found.</p> : <ul className="space-y-3">
                     {recentLabReports.map((report) => <li key={report.id} className="rounded-lg border border-gray-200 p-3">
-                        <p className="font-semibold text-gray-900">{report.test_type}</p>
-                        <p className="text-sm text-gray-600 flex items-center gap-2">
-                          <CalendarClock className="h-4 w-4" />
-                          {new Date(report.test_date).toLocaleDateString()} • {report.status}
-                        </p>
-                        {report.notes ? <p className="mt-1 text-sm text-gray-700">{report.notes}</p> : null}
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-gray-900">{report.test_type}</p>
+                            <p className="text-sm text-gray-600 flex items-center gap-2">
+                              <CalendarClock className="h-4 w-4" />
+                              {new Date(report.test_date).toLocaleDateString()} • {report.status}
+                            </p>
+                            {report.notes ? <p className="mt-1 text-sm text-gray-700">{report.notes}</p> : null}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleViewLabReport(report)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                          >
+                            <Eye className="h-4 w-4" />
+                            View
+                          </button>
+                        </div>
                       </li>)}
                   </ul>}
               </section>
