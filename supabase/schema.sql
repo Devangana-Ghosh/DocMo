@@ -76,6 +76,42 @@ create table if not exists public.lab_reports (
   created_at timestamptz not null default now()
 );
 
+create or replace function public.handle_new_auth_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  next_role text;
+  next_name text;
+begin
+  next_role := coalesce(new.raw_user_meta_data->>'role', 'patient');
+  if next_role not in ('patient', 'doctor', 'lab') then
+    next_role := 'patient';
+  end if;
+
+  next_name := coalesce(
+    nullif(new.raw_user_meta_data->>'full_name', ''),
+    nullif(split_part(new.email, '@', 1), ''),
+    'Signed-in user'
+  );
+
+  insert into public.profiles (id, role, full_name)
+  values (new.id, next_role, next_name)
+  on conflict (id) do update
+    set role = excluded.role,
+        full_name = excluded.full_name;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_auth_user();
+
 alter table public.profiles enable row level security;
 alter table public.appointments enable row level security;
 alter table public.prescriptions enable row level security;
@@ -114,6 +150,11 @@ create policy "profiles_self_update" on public.profiles
 for update to authenticated
 using (auth.uid() = id)
 with check (auth.uid() = id);
+
+drop policy if exists "profiles_self_insert" on public.profiles;
+create policy "profiles_self_insert" on public.profiles
+for insert to authenticated
+with check (auth.uid() = id and role in ('patient', 'doctor', 'lab'));
 
 drop policy if exists "appointments_patient_read" on public.appointments;
 create policy "appointments_patient_read" on public.appointments

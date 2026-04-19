@@ -35,6 +35,49 @@ FOR SELECT
 TO authenticated
 USING (role = 'doctor');
 
+DROP POLICY IF EXISTS "profiles_self_insert" ON public.profiles;
+CREATE POLICY "profiles_self_insert"
+ON public.profiles
+FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = id and role in ('patient', 'doctor', 'lab'));
+
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  next_role text;
+  next_name text;
+BEGIN
+  next_role := coalesce(new.raw_user_meta_data->>'role', 'patient');
+  IF next_role NOT IN ('patient', 'doctor', 'lab') THEN
+    next_role := 'patient';
+  END IF;
+
+  next_name := coalesce(
+    nullif(new.raw_user_meta_data->>'full_name', ''),
+    nullif(split_part(new.email, '@', 1), ''),
+    'Signed-in user'
+  );
+
+  INSERT INTO public.profiles (id, role, full_name)
+  VALUES (new.id, next_role, next_name)
+  ON CONFLICT (id) DO UPDATE
+    SET role = excluded.role,
+        full_name = excluded.full_name;
+
+  RETURN new;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
+
 DROP POLICY IF EXISTS "lab_reports_staff_update" ON public.lab_reports;
 CREATE POLICY "lab_reports_staff_update"
 ON public.lab_reports
