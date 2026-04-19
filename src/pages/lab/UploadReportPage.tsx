@@ -1,28 +1,81 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LabNavigation } from '../../components/LabNavigation';
 import { Footer } from '../../components/Footer';
 import { SkipLink } from '../../components/SkipLink';
 import { UploadPanel } from '../../components/lab/UploadPanel';
 import { PatientLookup } from '../../components/lab/PatientLookup';
+import type { Patient as LookupPatient } from '../../components/lab/PatientLookup';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Send, CheckCircle } from 'lucide-react';
+import { fetchProfilesByRole, uploadLabReport } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+
 export function UploadReportPage() {
+  const navigate = useNavigate();
+  const { profile } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [selectedPatient, setSelectedPatient] = useState<LookupPatient | null>(null);
+  const [patients, setPatients] = useState<LookupPatient[]>([]);
   const [testType, setTestType] = useState('');
+  const [testDate, setTestDate] = useState('');
+  const [notes, setNotes] = useState('');
   const [isUploaded, setIsUploaded] = useState(false);
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadPatients = async () => {
+      try {
+        const profiles = await fetchProfilesByRole('patient');
+        const mapped: LookupPatient[] = profiles.map((item) => ({
+          id: item.id,
+          name: item.full_name,
+          mrn: item.mrn ?? `MRN-${item.id.slice(0, 5)}`,
+          dob: item.dob ?? '1990-01-01',
+          gender: item.gender ?? 'Unknown',
+        }));
+        setPatients(mapped);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load patients.');
+      }
+    };
+
+    void loadPatients();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedFile && selectedPatient && testType) {
-      setIsUploaded(true);
-      setTimeout(() => {
-        setIsUploaded(false);
-        setSelectedFile(null);
-        setSelectedPatient(null);
-        setTestType('');
-      }, 3000);
+    if (!profile) return;
+
+    if (selectedFile && selectedPatient && testType && testDate) {
+      try {
+        setSubmitting(true);
+        await uploadLabReport({
+          patientId: selectedPatient.id,
+          uploadedBy: profile.id,
+          file: selectedFile,
+          testType,
+          notes,
+          testDate,
+        });
+
+        setIsUploaded(true);
+        setTimeout(() => {
+          setIsUploaded(false);
+          setSelectedFile(null);
+          setSelectedPatient(null);
+          setTestType('');
+          setTestDate('');
+          setNotes('');
+        }, 3000);
+      } catch (uploadError) {
+        setError(uploadError instanceof Error ? uploadError.message : 'Failed to upload report.');
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
   return <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
@@ -39,6 +92,8 @@ export function UploadReportPage() {
               Upload diagnostic test results and assign to patient records.
             </p>
           </div>
+
+          {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
           {isUploaded ? <div className="bg-white rounded-xl border-2 border-green-200 p-12 text-center shadow-sm">
               <div className="flex justify-center mb-6">
@@ -57,7 +112,9 @@ export function UploadReportPage() {
                 <Button onClick={() => setIsUploaded(false)} className="bg-purple-700 hover:bg-purple-800 border-purple-700">
                   Upload Another
                 </Button>
-                <Button variant="outline">View Reports</Button>
+                <Button variant="outline" onClick={() => navigate('/lab/reports')}>
+                  View Reports
+                </Button>
               </div>
             </div> : <form onSubmit={handleSubmit} className="space-y-8">
               <UploadPanel onFileSelect={setSelectedFile} selectedFile={selectedFile} onClearFile={() => setSelectedFile(null)} />
@@ -92,27 +149,29 @@ export function UploadReportPage() {
                 value: 'other',
                 label: 'Other'
               }]} value={testType} onChange={e => setTestType(e.target.value)} required />
-                  <Input label="Test Date" type="date" required max={new Date().toISOString().split('T')[0]} />
+                  <Input label="Test Date" type="date" value={testDate} onChange={(event) => setTestDate(event.target.value)} required />
                 </div>
                 <div className="mt-6">
                   <label className="block text-lg font-bold text-gray-900 mb-2">
                     Additional Notes (Optional)
                   </label>
-                  <textarea className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:ring-4 focus:ring-yellow-400 min-h-[100px]" placeholder="Any special observations or notes about the test..."></textarea>
+                  <textarea className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:ring-4 focus:ring-yellow-400 min-h-[100px]" placeholder="Any special observations or notes about the test..." value={notes} onChange={(event) => setNotes(event.target.value)}></textarea>
                 </div>
               </div>
 
-              <PatientLookup onSelectPatient={setSelectedPatient} selectedPatient={selectedPatient} />
+              <PatientLookup onSelectPatient={setSelectedPatient} selectedPatient={selectedPatient} patients={patients} />
 
               <div className="flex justify-end gap-4 pt-6">
                 <Button type="button" variant="outline" onClick={() => {
               setSelectedFile(null);
               setSelectedPatient(null);
               setTestType('');
+              setTestDate('');
+              setNotes('');
             }}>
                   Clear Form
                 </Button>
-                <Button type="submit" disabled={!selectedFile || !selectedPatient || !testType} className="bg-purple-700 hover:bg-purple-800 border-purple-700" leftIcon={<Send className="h-5 w-5" />}>
+                <Button type="submit" isLoading={submitting} disabled={!selectedFile || !selectedPatient || !testType || !testDate} className="bg-purple-700 hover:bg-purple-800 border-purple-700" leftIcon={<Send className="h-5 w-5" />}>
                   Upload Report
                 </Button>
               </div>

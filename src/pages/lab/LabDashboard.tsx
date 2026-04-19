@@ -1,31 +1,51 @@
-import React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LabNavigation } from '../../components/LabNavigation';
 import { Footer } from '../../components/Footer';
 import { SkipLink } from '../../components/SkipLink';
 import { FileText, Upload, CheckCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { fetchLabReports } from '../../services/api';
+import type { LabReport } from '../../types/backend';
 export function LabDashboard() {
+  const [reports, setReports] = useState<LabReport[]>([]);
+
+  useEffect(() => {
+    const loadReports = async () => {
+      const data = await fetchLabReports();
+      setReports(data);
+    };
+
+    void loadReports();
+  }, []);
+
+  const reportsToday = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return reports.filter((item) => item.created_at.slice(0, 10) === today).length;
+  }, [reports]);
+
   const stats = [{
     label: 'Reports Uploaded Today',
-    value: '24',
+    value: String(reportsToday),
     icon: Upload,
     color: 'bg-blue-100 text-blue-800'
   }, {
     label: 'Pending Review',
-    value: '8',
+    value: String(reports.filter((item) => item.status === 'Pending').length),
     icon: Clock,
     color: 'bg-yellow-100 text-yellow-800'
   }, {
     label: 'Completed Reports',
-    value: '156',
+    value: String(reports.filter((item) => item.status === 'Completed' || item.status === 'Reviewed').length),
     icon: CheckCircle,
     color: 'bg-green-100 text-green-800'
   }, {
     label: 'Total Reports',
-    value: '1,842',
+    value: String(reports.length),
     icon: FileText,
     color: 'bg-purple-100 text-purple-800'
   }];
+
+  const recentUploads = reports.slice(0, 3);
   return <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       <SkipLink />
       <LabNavigation />
@@ -69,32 +89,17 @@ export function LabDashboard() {
                   </Link>
                 </div>
                 <div className="divide-y divide-gray-100">
-                  {[{
-                  test: 'Complete Blood Count',
-                  patient: 'John Doe',
-                  time: '10 mins ago',
-                  status: 'Pending'
-                }, {
-                  test: 'Lipid Panel',
-                  patient: 'Jane Smith',
-                  time: '1 hour ago',
-                  status: 'Completed'
-                }, {
-                  test: 'Thyroid Function',
-                  patient: 'Robert Johnson',
-                  time: '2 hours ago',
-                  status: 'Completed'
-                }].map((upload, i) => <div key={i} className="p-6 flex items-center justify-between hover:bg-gray-50">
+                  {recentUploads.map((upload) => <div key={upload.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
                       <div className="flex items-center gap-4">
                         <div className="bg-purple-100 p-3 rounded-lg">
                           <FileText className="h-6 w-6 text-purple-700" />
                         </div>
                         <div>
                           <p className="text-lg font-bold text-gray-900">
-                            {upload.test}
+                            {upload.test_type}
                           </p>
                           <p className="text-gray-600">
-                            {upload.patient} • {upload.time}
+                            {upload.patient?.full_name ?? 'Patient'} • {new Date(upload.created_at).toLocaleString()}
                           </p>
                         </div>
                       </div>

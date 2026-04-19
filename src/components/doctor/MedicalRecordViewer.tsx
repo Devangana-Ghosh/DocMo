@@ -1,22 +1,32 @@
 import React from 'react';
-import { X, AlertTriangle, FileText, Pill, History } from 'lucide-react';
+import { X, FileText, Pill, History, CalendarClock, FlaskConical } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Patient } from './PatientCard';
+import type { Appointment, LabReport, MedicalDocument, Prescription } from '../../types/backend';
 interface MedicalRecordViewerProps {
   patient: Patient;
   isOpen: boolean;
   onClose: () => void;
-  hasConsent: boolean;
-  onRequestConsent: () => void;
+  record: {
+    appointments: Appointment[];
+    prescriptions: Prescription[];
+    documents: MedicalDocument[];
+    labReports: LabReport[];
+  };
 }
 export function MedicalRecordViewer({
   patient,
   isOpen,
   onClose,
-  hasConsent,
-  onRequestConsent
+  record,
 }: MedicalRecordViewerProps) {
   if (!isOpen) return null;
+
+  const recentPrescriptions = record.prescriptions.slice(0, 5);
+  const recentAppointments = record.appointments.slice(0, 5);
+  const recentDocuments = record.documents.slice(0, 6);
+  const recentLabReports = record.labReports.slice(0, 6);
+
   return <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
       <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         {/* Header */}
@@ -25,7 +35,7 @@ export function MedicalRecordViewer({
             <h2 id="modal-title" className="text-2xl font-bold">
               Medical Record: {patient.name}
             </h2>
-            <p className="text-teal-100">ID: {patient.id} • DOB: 1985-04-12</p>
+            <p className="text-teal-100">ID: {patient.id}</p>
           </div>
           <button onClick={onClose} className="text-white hover:bg-teal-700 p-2 rounded-lg focus:outline-none focus:ring-4 focus:ring-yellow-400" aria-label="Close modal">
             <X className="h-8 w-8" />
@@ -34,57 +44,20 @@ export function MedicalRecordViewer({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          {!hasConsent ? <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-              <div className="bg-yellow-100 p-6 rounded-full mb-6">
-                <AlertTriangle className="h-16 w-16 text-yellow-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                Patient Consent Required
-              </h3>
-              <p className="text-xl text-gray-600 max-w-lg mb-8">
-                You do not have permission to view the full medical history for
-                this patient. Request access to view records, prescriptions, and
-                lab results.
-              </p>
-              <Button onClick={onRequestConsent} size="lg" className="bg-teal-700 hover:bg-teal-800">
-                Request Access
-              </Button>
-            </div> : <div className="space-y-8">
-              {/* Allergies & Alerts */}
-              <section className="bg-white p-6 rounded-xl border-2 border-red-100 shadow-sm">
-                <h3 className="text-xl font-bold text-red-800 mb-4 flex items-center gap-2">
-                  <AlertTriangle className="h-6 w-6" />
-                  Allergies & Critical Alerts
-                </h3>
-                <div className="flex flex-wrap gap-3">
-                  <span className="bg-red-50 text-red-800 px-4 py-2 rounded-lg font-bold border border-red-200">
-                    Penicillin (Severe)
-                  </span>
-                  <span className="bg-orange-50 text-orange-800 px-4 py-2 rounded-lg font-bold border border-orange-200">
-                    Latex (Mild)
-                  </span>
-                </div>
-              </section>
-
+          <div className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Current Medications */}
                 <section className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-sm">
                   <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                     <Pill className="h-6 w-6 text-teal-600" />
-                    Current Medications
+                    Prescriptions
                   </h3>
-                  <ul className="space-y-4">
-                    <li className="pb-4 border-b border-gray-100 last:border-0">
-                      <p className="font-bold text-lg">Lisinopril 10mg</p>
-                      <p className="text-gray-600">
-                        1 tablet daily for hypertension
-                      </p>
-                    </li>
-                    <li className="pb-4 border-b border-gray-100 last:border-0">
-                      <p className="font-bold text-lg">Metformin 500mg</p>
-                      <p className="text-gray-600">Twice daily with meals</p>
-                    </li>
-                  </ul>
+                  {recentPrescriptions.length === 0 ? <p className="text-gray-500">No prescriptions found.</p> : <ul className="space-y-4">
+                      {recentPrescriptions.map((item) => <li key={item.id} className="pb-4 border-b border-gray-100 last:border-0">
+                          <p className="font-bold text-lg">{item.medication_name}</p>
+                          <p className="text-gray-600">{item.dosage} • {item.frequency} • {item.status}</p>
+                        </li>)}
+                    </ul>}
                 </section>
 
                 {/* Recent History */}
@@ -93,24 +66,15 @@ export function MedicalRecordViewer({
                     <History className="h-6 w-6 text-teal-600" />
                     Recent Visits
                   </h3>
-                  <ul className="space-y-4">
-                    <li className="pb-4 border-b border-gray-100 last:border-0">
-                      <div className="flex justify-between mb-1">
-                        <span className="font-bold">Annual Checkup</span>
-                        <span className="text-gray-500">Oct 15, 2023</span>
-                      </div>
-                      <p className="text-gray-600">
-                        Dr. Sarah Wilson • Routine physical
-                      </p>
-                    </li>
-                    <li className="pb-4 border-b border-gray-100 last:border-0">
-                      <div className="flex justify-between mb-1">
-                        <span className="font-bold">Urgent Care</span>
-                        <span className="text-gray-500">Aug 02, 2023</span>
-                      </div>
-                      <p className="text-gray-600">Minor injury treatment</p>
-                    </li>
-                  </ul>
+                  {recentAppointments.length === 0 ? <p className="text-gray-500">No appointments found.</p> : <ul className="space-y-4">
+                      {recentAppointments.map((item) => <li key={item.id} className="pb-4 border-b border-gray-100 last:border-0">
+                          <div className="flex justify-between mb-1 gap-4">
+                            <span className="font-bold truncate">{item.reason}</span>
+                            <span className="text-gray-500 whitespace-nowrap">{new Date(item.appointment_date).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-gray-600">{item.appointment_type} • {item.status}</p>
+                        </li>)}
+                    </ul>}
                 </section>
               </div>
 
@@ -118,26 +82,36 @@ export function MedicalRecordViewer({
               <section className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-sm">
                 <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <FileText className="h-6 w-6 text-teal-600" />
-                  Documents & Labs
+                  Documents
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <button className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 hover:bg-teal-50 transition-colors text-left">
-                    <FileText className="h-8 w-8 text-gray-400 mr-3" />
-                    <div>
-                      <p className="font-bold text-gray-900">Blood Panel</p>
-                      <p className="text-sm text-gray-500">Oct 15, 2023</p>
-                    </div>
-                  </button>
-                  <button className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 hover:bg-teal-50 transition-colors text-left">
-                    <FileText className="h-8 w-8 text-gray-400 mr-3" />
-                    <div>
-                      <p className="font-bold text-gray-900">ECG Report</p>
-                      <p className="text-sm text-gray-500">Oct 15, 2023</p>
-                    </div>
-                  </button>
-                </div>
+                {recentDocuments.length === 0 ? <p className="text-gray-500">No documents found.</p> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {recentDocuments.map((doc) => <div key={doc.id} className="flex items-center p-4 border-2 border-gray-200 rounded-lg bg-white text-left">
+                        <FileText className="h-8 w-8 text-gray-400 mr-3" />
+                        <div className="min-w-0">
+                          <p className="font-bold text-gray-900 truncate">{doc.name}</p>
+                          <p className="text-sm text-gray-500">{new Date(doc.created_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>)}
+                  </div>}
               </section>
-            </div>}
+
+              <section className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-sm">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <FlaskConical className="h-6 w-6 text-teal-600" />
+                  Lab Reports
+                </h3>
+                {recentLabReports.length === 0 ? <p className="text-gray-500">No lab reports found.</p> : <ul className="space-y-3">
+                    {recentLabReports.map((report) => <li key={report.id} className="rounded-lg border border-gray-200 p-3">
+                        <p className="font-semibold text-gray-900">{report.test_type}</p>
+                        <p className="text-sm text-gray-600 flex items-center gap-2">
+                          <CalendarClock className="h-4 w-4" />
+                          {new Date(report.test_date).toLocaleDateString()} • {report.status}
+                        </p>
+                        {report.notes ? <p className="mt-1 text-sm text-gray-700">{report.notes}</p> : null}
+                      </li>)}
+                  </ul>}
+              </section>
+            </div>
         </div>
 
         {/* Footer Actions */}
@@ -145,9 +119,6 @@ export function MedicalRecordViewer({
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          {hasConsent && <Button className="bg-teal-700 hover:bg-teal-800 border-teal-700">
-              Add Clinical Note
-            </Button>}
         </div>
       </div>
     </div>;

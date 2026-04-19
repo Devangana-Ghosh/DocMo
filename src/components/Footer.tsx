@@ -1,4 +1,4 @@
-import React from 'react';
+import { Link } from 'react-router-dom';
 export function Footer() {
   return <footer className="bg-gray-900 text-white py-12 border-t-4 border-blue-600">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -19,11 +19,26 @@ export function Footer() {
               Quick Links
             </h3>
             <ul className="space-y-4">
-              {['About Us', 'Contact Support', 'Privacy Policy', 'Terms of Service'].map(item => <li key={item}>
-                  <a href="#" className="text-lg text-gray-300 hover:text-white hover:underline focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:text-white rounded px-1 -ml-1 inline-block py-1">
-                    {item}
-                  </a>
-                </li>)}
+              <li>
+                <Link to="/about" className="text-lg text-gray-300 hover:text-white hover:underline focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:text-white rounded px-1 -ml-1 inline-block py-1">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="text-lg text-gray-300 hover:text-white hover:underline focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:text-white rounded px-1 -ml-1 inline-block py-1">
+                  Contact Support
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="text-lg text-gray-300 hover:text-white hover:underline focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:text-white rounded px-1 -ml-1 inline-block py-1">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="text-lg text-gray-300 hover:text-white hover:underline focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:text-white rounded px-1 -ml-1 inline-block py-1">
+                  Terms of Service
+                </Link>
+              </li>
             </ul>
           </nav>
 
@@ -37,9 +52,9 @@ export function Footer() {
               disabilities. We are continually improving the user experience for
               everyone and applying the relevant accessibility standards.
             </p>
-            <a href="#" className="inline-block text-lg font-bold text-white bg-blue-700 hover:bg-blue-600 px-6 py-3 rounded-lg border-2 border-transparent focus:outline-none focus:ring-4 focus:ring-yellow-400 transition-colors">
+            <Link to="/privacy" className="inline-block text-lg font-bold text-white bg-blue-700 hover:bg-blue-600 px-6 py-3 rounded-lg border-2 border-transparent focus:outline-none focus:ring-4 focus:ring-yellow-400 transition-colors">
               Read Accessibility Statement
-            </a>
+            </Link>
           </div>
         </div>
 

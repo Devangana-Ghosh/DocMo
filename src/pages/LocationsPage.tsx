@@ -1,9 +1,11 @@
 import React from 'react';
+import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { Footer } from '../components/Footer';
 import { SkipLink } from '../components/SkipLink';
 import { Button } from '../components/ui/Button';
 import { MapPin, Clock, Phone, Mail, Navigation as NavigationIcon } from 'lucide-react';
+import { searchLocationsWithNominatim } from '../services/integrations';
 interface Location {
   id: string;
   name: string;
@@ -87,6 +89,25 @@ const LOCATIONS: Location[] = [{
   mapUrl: 'https://maps.google.com/?q=321+Medical+Plaza+Drive+Springfield+IL'
 }];
 export function LocationsPage() {
+  const [mapLinks, setMapLinks] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const hydrateMapLinks = async () => {
+      const entries = await Promise.all(LOCATIONS.map(async (location) => {
+        try {
+          const [match] = await searchLocationsWithNominatim(`${location.address}, ${location.city}, ${location.state} ${location.zip}`, 1);
+          return [location.id, match?.osmUrl ?? location.mapUrl] as const;
+        } catch {
+          return [location.id, location.mapUrl] as const;
+        }
+      }));
+
+      setMapLinks(Object.fromEntries(entries));
+    };
+
+    void hydrateMapLinks();
+  }, []);
+
   return <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       <SkipLink />
       <Navigation />
@@ -182,9 +203,9 @@ export function LocationsPage() {
                     </div>
 
                     <div className="space-y-4">
-                      <a href={location.mapUrl} target="_blank" rel="noopener noreferrer">
+                      <a href={mapLinks[location.id] ?? location.mapUrl} target="_blank" rel="noopener noreferrer">
                         <Button className="w-full" leftIcon={<NavigationIcon className="w-5 h-5" />}>
-                          Get Directions
+                          OpenStreetMap Directions
                         </Button>
                       </a>
                       <Button variant="secondary" className="w-full">

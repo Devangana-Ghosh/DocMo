@@ -1,53 +1,75 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { Footer } from '../components/Footer';
 import { SkipLink } from '../components/SkipLink';
-import { Button } from '../components/ui/Button';
 import { FileText, Upload, Download, Eye, Trash2 } from 'lucide-react';
-interface Document {
-  id: string;
-  name: string;
-  type: 'Report' | 'Prescription' | 'Lab Result';
-  date: string;
-  size: string;
-}
-const MOCK_DOCUMENTS: Document[] = [{
-  id: '1',
-  name: 'Blood Test Results.pdf',
-  type: 'Lab Result',
-  date: 'Oct 24, 2023',
-  size: '2.4 MB'
-}, {
-  id: '2',
-  name: 'Cardiology Prescription.pdf',
-  type: 'Prescription',
-  date: 'Sep 15, 2023',
-  size: '1.1 MB'
-}, {
-  id: '3',
-  name: 'Annual Physical Report.pdf',
-  type: 'Report',
-  date: 'Aug 02, 2023',
-  size: '4.5 MB'
-}];
+import type { MedicalDocument } from '../types/backend';
+import { useAuth } from '../contexts/AuthContext';
+import { deleteDocument, fetchDocuments, getDocumentPublicUrl, uploadPatientDocument } from '../services/api';
+
 export function DocumentsPage() {
-  const [documents, setDocuments] = useState<Document[]>(MOCK_DOCUMENTS);
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Mock upload functionality
+  const { profile } = useAuth();
+  const [documents, setDocuments] = useState<MedicalDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadDocuments = async () => {
+      if (!profile) return;
+
+      try {
+        setLoading(true);
+        const data = await fetchDocuments(profile.id);
+        setDocuments(data);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load documents.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadDocuments();
+  }, [profile]);
+  
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      if (!profile) return;
+
       const file = e.target.files[0];
-      const newDoc: Document = {
-        id: Date.now().toString(),
-        name: file.name,
-        type: 'Report',
-        date: new Date().toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric'
-        }),
-        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`
-      };
-      setDocuments([newDoc, ...documents]);
+
+      try {
+        const newDoc = await uploadPatientDocument(profile.id, file, 'Report');
+        setDocuments((current) => [newDoc, ...current]);
+      } catch (uploadError) {
+        setError(uploadError instanceof Error ? uploadError.message : 'Failed to upload document.');
+      }
+
+      // Reset the input so the same file can be uploaded again
+      e.target.value = '';
+    }
+  };
+
+  const handleView = async (doc: MedicalDocument) => {
+    const url = await getDocumentPublicUrl(doc.file_path);
+    window.open(url, '_blank');
+  };
+
+  const handleDownload = async (doc: MedicalDocument) => {
+    const url = await getDocumentPublicUrl(doc.file_path);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = doc.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDelete = async (doc: MedicalDocument) => {
+    try {
+      await deleteDocument(doc);
+      setDocuments((current) => current.filter((item) => item.id !== doc.id));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete document.');
     }
   };
   return <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
@@ -101,6 +123,11 @@ export function DocumentsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
+                  {loading && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">Loading documents...</td>
+                    </tr>
+                  )}
                   {documents.map(doc => <tr key={doc.id} className="hover:bg-blue-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center">
@@ -116,17 +143,29 @@ export function DocumentsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-lg text-gray-700">
-                        {doc.date}
+                        {new Date(doc.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-3">
-                          <button className="p-2 text-blue-800 hover:bg-blue-100 rounded-lg focus:outline-none focus:ring-4 focus:ring-yellow-400" aria-label={`View ${doc.name}`}>
+                          <button 
+                            className="p-2 text-blue-800 hover:bg-blue-100 rounded-lg focus:outline-none focus:ring-4 focus:ring-yellow-400" 
+                            aria-label={`View ${doc.name}`}
+                            onClick={() => handleView(doc)}
+                          >
                             <Eye className="h-5 w-5" />
                           </button>
-                          <button className="p-2 text-blue-800 hover:bg-blue-100 rounded-lg focus:outline-none focus:ring-4 focus:ring-yellow-400" aria-label={`Download ${doc.name}`}>
+                          <button 
+                            className="p-2 text-blue-800 hover:bg-blue-100 rounded-lg focus:outline-none focus:ring-4 focus:ring-yellow-400" 
+                            aria-label={`Download ${doc.name}`}
+                            onClick={() => handleDownload(doc)}
+                          >
                             <Download className="h-5 w-5" />
                           </button>
-                          <button className="p-2 text-red-700 hover:bg-red-50 rounded-lg focus:outline-none focus:ring-4 focus:ring-yellow-400" aria-label={`Delete ${doc.name}`} onClick={() => setDocuments(documents.filter(d => d.id !== doc.id))}>
+                          <button 
+                            className="p-2 text-red-700 hover:bg-red-50 rounded-lg focus:outline-none focus:ring-4 focus:ring-yellow-400" 
+                            aria-label={`Delete ${doc.name}`} 
+                            onClick={() => handleDelete(doc)}
+                          >
                             <Trash2 className="h-5 w-5" />
                           </button>
                         </div>
@@ -138,6 +177,7 @@ export function DocumentsPage() {
             {documents.length === 0 && <div className="p-12 text-center text-gray-500 text-lg">
                 No documents found. Upload a file to get started.
               </div>}
+            {error && <div className="mx-6 mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
           </div>
         </div>
       </main>

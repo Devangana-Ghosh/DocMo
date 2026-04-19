@@ -1,8 +1,9 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Stethoscope, LogOut } from 'lucide-react';
+
 export function DoctorNavigation() {
   const location = useLocation();
+  const navigate = useNavigate();
   const navLinks = [{
     name: 'Dashboard',
     href: '/doctor/dashboard'
@@ -50,7 +51,12 @@ export function DoctorNavigation() {
               </p>
               <p className="text-xs text-gray-500">Cardiology</p>
             </div>
-            <button type="button" className="flex items-center gap-2 text-teal-800 hover:bg-teal-50 px-3 py-2 rounded-lg font-bold border-2 border-transparent hover:border-teal-200 focus:outline-none focus:ring-4 focus:ring-teal-500" aria-label="Log out">
+            <button 
+              type="button" 
+              onClick={() => navigate('/login/doctor')} 
+              className="flex items-center gap-2 text-teal-800 hover:bg-teal-50 px-3 py-2 rounded-lg font-bold border-2 border-transparent hover:border-teal-200 focus:outline-none focus:ring-4 focus:ring-teal-500" 
+              aria-label="Log out"
+            >
               <LogOut className="h-5 w-5" />
               <span className="hidden sm:inline">Logout</span>
             </button>
