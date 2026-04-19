@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { Send } from 'lucide-react';
-import { fetchRxNormSuggestions, type RxNormConcept } from '../../services/integrations';
+import { fetchOpenFdaDrugInteractionText, fetchRxNormSuggestions, type RxNormConcept } from '../../services/integrations';
 import type { Prescription } from '../../types/backend';
 
 export interface PrescriptionFormValues {
@@ -42,6 +42,54 @@ interface PrescriptionFormProps {
   submitLabel?: string;
 }
 
+type ConflictSeverity = 'high' | 'moderate';
+
+type MedicationConflict = {
+  severity: ConflictSeverity;
+  withMedication: string;
+  reason: string;
+};
+
+type InteractionRule = {
+  severity: ConflictSeverity;
+  a: string[];
+  b: string[];
+  reason: string;
+};
+
+const INTERACTION_RULES: InteractionRule[] = [
+  {
+    severity: 'high',
+    a: ['warfarin'],
+    b: ['ibuprofen', 'naproxen', 'aspirin', 'diclofenac'],
+    reason: 'Increased bleeding risk when anticoagulants are combined with NSAIDs.',
+  },
+  {
+    severity: 'high',
+    a: ['sildenafil', 'tadalafil', 'vardenafil'],
+    b: ['nitroglycerin', 'isosorbide'],
+    reason: 'Can cause severe hypotension with nitrate therapy.',
+  },
+  {
+    severity: 'high',
+    a: ['clarithromycin', 'erythromycin'],
+    b: ['simvastatin', 'atorvastatin'],
+    reason: 'Risk of statin toxicity and myopathy with strong CYP inhibition.',
+  },
+  {
+    severity: 'moderate',
+    a: ['tramadol'],
+    b: ['sertraline', 'fluoxetine', 'escitalopram', 'venlafaxine'],
+    reason: 'Possible serotonin syndrome risk; monitor closely.',
+  },
+  {
+    severity: 'moderate',
+    a: ['metformin'],
+    b: ['glimepiride', 'gliclazide', 'insulin'],
+    reason: 'Additive glucose-lowering effect; monitor for hypoglycemia.',
+  },
+];
+
 function parseMedicationFromRxNormLabel(label: string) {
   const dosageMatch = label.match(/\b(\d+(?:\.\d+)?)\s*(MG|MCG|G|ML|IU|UNITS|MEQ|MMOL)(?:\s*\/\s*(ML|L|HR|ACTUAT))?\b/i);
 
@@ -68,10 +116,72 @@ function parseMedicationFromRxNormLabel(label: string) {
   };
 }
 
+function normalizeMedicationName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function medicationMatches(name: string, terms: string[]) {
+  const normalized = normalizeMedicationName(name);
+  return terms.some((term) => normalized.includes(term));
+}
+
+function summarizeInteractionText(value: string) {
+  const compact = value.replace(/\s+/g, ' ').trim();
+  if (compact.length <= 220) return compact;
+  return `${compact.slice(0, 220)}...`;
+}
+
+function severityFromText(value: string): ConflictSeverity {
+  const text = value.toLowerCase();
+  if (text.includes('contraindicat') || text.includes('major') || text.includes('severe') || text.includes('fatal')) {
+    return 'high';
+  }
+  return 'moderate';
+}
+
+function primaryMedicationKeyword(value: string) {
+  return normalizeMedicationName(value).split(' ').find((term) => term.length >= 3) ?? '';
+}
+
+function detectMedicationConflicts(currentMedication: string, activePrescriptions: Prescription[]): MedicationConflict[] {
+  if (!currentMedication.trim()) return [];
+
+  const conflicts: MedicationConflict[] = [];
+  const uniqueKey = new Set<string>();
+
+  activePrescriptions.forEach((item) => {
+    const existing = item.medication_normalized ?? item.medication_name;
+
+    INTERACTION_RULES.forEach((rule) => {
+      const forward = medicationMatches(currentMedication, rule.a) && medicationMatches(existing, rule.b);
+      const backward = medicationMatches(currentMedication, rule.b) && medicationMatches(existing, rule.a);
+      if (!forward && !backward) return;
+
+      const dedupe = `${rule.reason}-${existing}`;
+      if (uniqueKey.has(dedupe)) return;
+
+      uniqueKey.add(dedupe);
+      conflicts.push({
+        severity: rule.severity,
+        withMedication: item.medication_name,
+        reason: rule.reason,
+      });
+    });
+  });
+
+  return conflicts;
+}
+
 export function PrescriptionForm({ patientOptions, existingPrescriptions = [], onSubmitPrescription, initialValues, submitLabel = 'Issue Prescription' }: PrescriptionFormProps) {
   const [values, setValues] = useState<PrescriptionFormValues>({ ...DEFAULT_VALUES, ...initialValues });
   const [submitting, setSubmitting] = useState(false);
   const [rxNormSuggestions, setRxNormSuggestions] = useState<RxNormConcept[]>([]);
+  const [apiConflicts, setApiConflicts] = useState<MedicationConflict[]>([]);
+  const openFdaCacheRef = useRef<Map<string, string | null>>(new Map());
 
   useEffect(() => {
     setValues({ ...DEFAULT_VALUES, ...initialValues });
@@ -97,7 +207,18 @@ export function PrescriptionForm({ patientOptions, existingPrescriptions = [], o
   }, [values.medicationName]);
 
   useEffect(() => {
-    const match = rxNormSuggestions.find((item) => item.name.toLowerCase() === values.medicationName.trim().toLowerCase());
+    const normalizedInput = normalizeMedicationName(values.medicationName);
+    const match = rxNormSuggestions.find((item) => {
+      const normalizedName = normalizeMedicationName(item.name);
+      const normalizedSynonym = normalizeMedicationName(item.synonym ?? '');
+      return (
+        normalizedName === normalizedInput ||
+        normalizedSynonym === normalizedInput ||
+        normalizedName.startsWith(`${normalizedInput} `) ||
+        normalizedSynonym.startsWith(`${normalizedInput} `)
+      );
+    });
+
     if (!match) {
       setValues((current) => ({
         ...current,
@@ -133,6 +254,139 @@ export function PrescriptionForm({ patientOptions, existingPrescriptions = [], o
     return Boolean(normalizedCurrent && normalizedCurrent === normalizedExisting);
   });
 
+  const patientMedicationHistory = useMemo(
+    () =>
+      existingPrescriptions
+        .filter((item) => item.patient_id === values.patientId)
+        .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()),
+    [existingPrescriptions, values.patientId],
+  );
+
+  const activePatientMeds = useMemo(
+    () => patientMedicationHistory.filter((item) => item.status === 'Active' || item.status === 'Refill Needed'),
+    [patientMedicationHistory],
+  );
+  const ruleConflicts = useMemo(
+    () => detectMedicationConflicts(values.medicationNormalized || values.medicationName, activePatientMeds),
+    [values.medicationNormalized, values.medicationName, activePatientMeds],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      void loadApiConflicts();
+    }, 350);
+
+    async function loadApiConflicts() {
+      if (!values.patientId || !values.medicationName.trim()) {
+        setApiConflicts([]);
+        return;
+      }
+
+      const candidates = activePatientMeds
+        .filter((item) => item.status !== 'Cancelled' && item.status !== 'Completed')
+        .slice(0, 10);
+
+      if (!candidates.length) {
+        setApiConflicts([]);
+        return;
+      }
+
+      const sourceMedication = values.medicationName.trim() || values.medicationNormalized.trim();
+      const sourceKeyword = primaryMedicationKeyword(sourceMedication);
+      let interactionText = '';
+
+      const sourceCacheKey = normalizeMedicationName(sourceMedication);
+      if (openFdaCacheRef.current.has(sourceCacheKey)) {
+        interactionText = (openFdaCacheRef.current.get(sourceCacheKey) ?? '').toLowerCase();
+      } else {
+        try {
+          const fromOpenFda = await fetchOpenFdaDrugInteractionText(sourceMedication);
+          openFdaCacheRef.current.set(sourceCacheKey, fromOpenFda ?? null);
+          interactionText = (fromOpenFda ?? '').toLowerCase();
+        } catch {
+          openFdaCacheRef.current.set(sourceCacheKey, null);
+          interactionText = '';
+        }
+      }
+
+      if (!interactionText) {
+        setApiConflicts([]);
+        return;
+      }
+
+      const checks = await Promise.all(
+        candidates.map(async (item) => {
+          const normalizedExisting = normalizeMedicationName(item.medication_normalized ?? item.medication_name);
+          const terms = normalizedExisting.split(' ').filter((term) => term.length >= 4);
+          const existingKeyword = primaryMedicationKeyword(item.medication_normalized ?? item.medication_name);
+          if (!terms.length && !existingKeyword) return null;
+
+          const matched = terms.some((term) => interactionText.includes(term));
+          if (matched) {
+            const snippet = summarizeInteractionText(interactionText);
+            return {
+              severity: severityFromText(interactionText),
+              withMedication: item.medication_name,
+              reason: `openFDA label notes potential interaction: ${snippet}`,
+            } as MedicationConflict;
+          }
+
+          if (!existingKeyword || !sourceKeyword) return null;
+
+          let reverseText = '';
+          const existingMedication = item.medication_normalized ?? item.medication_name;
+          const existingCacheKey = normalizeMedicationName(existingMedication);
+          if (openFdaCacheRef.current.has(existingCacheKey)) {
+            reverseText = (openFdaCacheRef.current.get(existingCacheKey) ?? '').toLowerCase();
+          } else {
+            try {
+              const reverse = await fetchOpenFdaDrugInteractionText(existingMedication);
+              openFdaCacheRef.current.set(existingCacheKey, reverse ?? null);
+              reverseText = (reverse ?? '').toLowerCase();
+            } catch {
+              openFdaCacheRef.current.set(existingCacheKey, null);
+              reverseText = '';
+            }
+          }
+
+          if (!reverseText || !reverseText.includes(sourceKeyword)) {
+            return null;
+          }
+
+          const snippet = summarizeInteractionText(reverseText);
+          return {
+            severity: severityFromText(reverseText),
+            withMedication: item.medication_name,
+            reason: `openFDA label notes potential interaction: ${snippet}`,
+          } as MedicationConflict;
+        }),
+      );
+
+      if (cancelled) return;
+
+      const dedupe = new Set<string>();
+      const conflicts = checks.filter((item): item is MedicationConflict => Boolean(item)).filter((item) => {
+        const key = `${item.withMedication}-${item.reason}`;
+        if (dedupe.has(key)) return false;
+        dedupe.add(key);
+        return true;
+      });
+
+      setApiConflicts(conflicts);
+    }
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [values.patientId, values.medicationName, values.medicationNormalized, activePatientMeds]);
+
+  const medicationConflicts = [...ruleConflicts, ...apiConflicts].filter((item, index, array) => {
+    const key = `${item.withMedication}-${item.reason}-${item.severity}`;
+    return array.findIndex((entry) => `${entry.withMedication}-${entry.reason}-${entry.severity}` === key) === index;
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -153,6 +407,54 @@ export function PrescriptionForm({ patientOptions, existingPrescriptions = [], o
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="md:col-span-2">
           <Select label="Select Patient" options={patientOptions} value={values.patientId} onChange={(event) => setValues((current) => ({ ...current, patientId: event.target.value }))} required />
+          {values.patientId && (
+            <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+              <p className="font-semibold">Patient medication snapshot</p>
+              {activePatientMeds.length > 0 ? (
+                <>
+                  <p className="mt-1 text-sky-800">Active medications:</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {activePatientMeds.slice(0, 6).map((item) => (
+                      <span key={item.id} className="rounded-full border border-sky-200 bg-white px-2 py-1 text-xs font-medium">
+                        {item.medication_name}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="mt-1 text-sky-800">No active medications found for this patient.</p>
+              )}
+
+              {patientMedicationHistory.length > 0 && (
+                <>
+                  <p className="mt-3 text-sky-800">Quick pick from recent prescriptions:</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {patientMedicationHistory.slice(0, 5).map((item) => (
+                      <button
+                        key={`quick-${item.id}`}
+                        type="button"
+                        className="rounded-full border border-sky-300 bg-white px-3 py-1 text-xs font-semibold text-sky-800 hover:bg-sky-100"
+                        onClick={() =>
+                          setValues((current) => ({
+                            ...current,
+                            medicationName: item.medication_name,
+                            medicationNormalized: item.medication_normalized ?? item.medication_name,
+                            rxcui: item.rxcui ?? '',
+                            rxnormVerified: Boolean(item.rxnorm_verified),
+                            dosage: item.dosage,
+                            frequency: item.frequency,
+                            duration: item.duration,
+                          }))
+                        }
+                      >
+                        {item.medication_name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div>
@@ -178,6 +480,27 @@ export function PrescriptionForm({ patientOptions, existingPrescriptions = [], o
           {duplicateTherapy && <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
               Similar active therapy exists: {duplicateTherapy.medication_name} ({duplicateTherapy.dosage}). Review before issuing.
             </div>}
+          {medicationConflicts.length > 0 && (
+            <div className="space-y-2">
+              {medicationConflicts.map((conflict, index) => (
+                <div
+                  key={`${conflict.withMedication}-${index}`}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    conflict.severity === 'high'
+                      ? 'border-red-300 bg-red-50 text-red-800'
+                      : 'border-amber-300 bg-amber-50 text-amber-800'
+                  }`}
+                >
+                  <p className="font-semibold uppercase text-xs tracking-wide mb-1">
+                    {conflict.severity === 'high' ? 'High-risk interaction' : 'Moderate interaction'}
+                  </p>
+                  <p>
+                    Possible conflict with <span className="font-semibold">{conflict.withMedication}</span>. {conflict.reason}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <Input label="Dosage" placeholder="e.g. 500mg" value={values.dosage} onChange={(event) => setValues((current) => ({ ...current, dosage: event.target.value }))} required />
 

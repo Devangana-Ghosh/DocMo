@@ -26,6 +26,7 @@ import { TermsPage } from './pages/TermsPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ToastProvider } from './components/ui/Toast';
+import { AssistantChatbot } from './components/ai/AssistantChatbot';
 
 export function App() {
   return <AuthProvider>
@@ -64,6 +65,7 @@ export function App() {
         <Route path="/lab/upload" element={<ProtectedRoute allowedRoles={['lab']}><UploadReportPage /></ProtectedRoute>} />
         <Route path="/lab/reports" element={<ProtectedRoute allowedRoles={['lab']}><ReportsPage /></ProtectedRoute>} />
         </Routes>
+        <AssistantChatbot />
       </Router>
     </ToastProvider>
   </AuthProvider>;
