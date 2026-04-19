@@ -12,7 +12,9 @@ import { fetchProfilesByRole } from '../services/api';
 import type { Profile } from '../types/backend';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchDoctorAvailability, lookupDoctorInNpiRegistry } from '../services/integrations';
+import { useLocation } from 'react-router-dom';
 export function FindDoctorPage() {
+  const location = useLocation();
   const { profile, loading: authLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [specialty, setSpecialty] = useState('');
@@ -20,6 +22,20 @@ export function FindDoctorPage() {
   const [sortBy, setSortBy] = useState<'availability' | 'rating' | 'price'>('availability');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q');
+    const specialtyQuery = params.get('specialty');
+
+    if (q !== null) {
+      setSearchTerm(q);
+    }
+
+    if (specialtyQuery !== null) {
+      setSpecialty(specialtyQuery);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const loadDoctors = async () => {

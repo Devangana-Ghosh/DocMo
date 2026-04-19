@@ -6,6 +6,19 @@ type MeetingLinkResponse = {
   meetingLink?: string;
 };
 
+type AssistantRole = 'patient' | 'doctor' | 'lab' | 'guest';
+
+type AssistantConversationMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+type AssistantResponse = {
+  reply: string;
+  sources?: string[];
+  usedLlm?: boolean;
+};
+
 function getEdgeFunctionHeaders() {
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
   if (!anonKey) {
@@ -24,6 +37,15 @@ function getEdgeFunctionHeaders() {
 function toErrorMessage(value: unknown, fallback: string) {
   if (value instanceof Error) return value.message;
   return fallback;
+}
+
+function getAssistantApiUrl() {
+  const explicit = import.meta.env.VITE_AI_ASSISTANT_API_URL as string | undefined;
+  if (explicit) return explicit;
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (!supabaseUrl) return undefined;
+  return `${supabaseUrl}/functions/v1/ai-assistant`;
 }
 
 function defaultSlotsForDate(date: string) {
@@ -45,6 +67,11 @@ export type RxNormConcept = {
   rxcui: string;
   tty?: string;
   synonym?: string;
+};
+
+export type RxNormInteractionResult = {
+  severity: 'high' | 'moderate';
+  description: string;
 };
 
 const RXNORM_PREFERRED_TTYS = ['SCD', 'SBD', 'IN', 'MIN', 'PIN', 'BN'] as const;
@@ -325,4 +352,186 @@ export function buildGoogleCalendarEventUrl(params: {
   }
 
   return url.toString();
+}
+
+export async function askRoleAssistant(params: {
+  role: AssistantRole;
+  message: string;
+  conversation?: AssistantConversationMessage[];
+}) {
+  const endpoint = getAssistantApiUrl();
+  if (!endpoint) {
+    return {
+      reply: 'Assistant endpoint is not configured. Set VITE_AI_ASSISTANT_API_URL or VITE_SUPABASE_URL.',
+      sources: [],
+      usedLlm: false,
+    } as AssistantResponse;
+  }
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: getEdgeFunctionHeaders(),
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Assistant request failed (${response.status}): ${text}`);
+  }
+
+  return (await response.json()) as AssistantResponse;
+}
+
+function normalizeInteractionSeverity(value?: string) {
+  const text = (value ?? '').toLowerCase();
+  if (text.includes('contraindicated') || text.includes('major') || text.includes('severe') || text.includes('high')) {
+    return 'high' as const;
+  }
+
+  return 'moderate' as const;
+}
+
+export async function fetchRxNormInteractionForPair(rxcuiA: string, rxcuiB: string): Promise<RxNormInteractionResult | null> {
+  if (!rxcuiA || !rxcuiB) return null;
+
+  const url = new URL('https://rxnav.nlm.nih.gov/REST/interaction/list.json');
+  url.searchParams.set('rxcuis', `${rxcuiA}+${rxcuiB}`);
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`RxNav interaction error: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    fullInteractionTypeGroup?: Array<{
+      fullInteractionType?: Array<{
+        minConcept?: Array<{ rxcui?: string }>;
+        interactionPair?: Array<{ description?: string; severity?: string }>;
+      }>;
+    }>;
+  };
+
+  const interactions = payload.fullInteractionTypeGroup
+    ?.flatMap((group) => group.fullInteractionType ?? [])
+    .flatMap((type) => type.interactionPair ?? []);
+
+  const first = interactions?.[0];
+  if (!first?.description) return null;
+
+  return {
+    severity: normalizeInteractionSeverity(first.severity),
+    description: first.description,
+  };
+}
+
+export async function fetchOpenFdaDrugInteractionText(medicationName: string): Promise<string | null> {
+  if (medicationName.trim().length < 2) return null;
+
+  const normalized = medicationName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\b(oral|tablet|capsule|solution|suspension|extended|release|mg|mcg|ml|injection)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const words = normalized.split(' ').filter((word) => word.length >= 3);
+  const primary = words[0] ?? normalized;
+  const phrase = words.slice(0, 2).join(' ').trim();
+
+  const candidates = [normalized, phrase, primary]
+    .filter((value) => value.length >= 2)
+    .filter((value, index, array) => array.indexOf(value) === index);
+
+  const searchQueries = candidates.flatMap((value) => [
+    `openfda.generic_name.exact:"${value}"`,
+    `openfda.substance_name.exact:"${value}"`,
+    `openfda.generic_name:"${value}"`,
+    `openfda.substance_name:"${value}"`,
+  ]);
+
+  for (const query of searchQueries) {
+    const url = new URL('https://api.fda.gov/drug/label.json');
+    url.searchParams.set('search', query);
+    url.searchParams.set('limit', '1');
+
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      if (response.status === 404) continue;
+      throw new Error(`openFDA label lookup error: ${response.status}`);
+    }
+
+    const payload = (await response.json()) as {
+      results?: Array<{
+        drug_interactions?: string[];
+        warnings_and_precautions?: string[];
+      }>;
+    };
+
+    const first = payload.results?.[0];
+    if (!first) continue;
+
+    const interactionText = (first.drug_interactions ?? []).join(' ');
+    const warningText = (first.warnings_and_precautions ?? []).join(' ');
+    const combined = `${interactionText} ${warningText}`.trim();
+    if (combined) return combined;
+  }
+
+  return null;
+}
+
+export async function fetchRxNormRxcuiForName(term: string): Promise<string | null> {
+  if (term.trim().length < 2) return null;
+
+  const url = new URL('https://rxnav.nlm.nih.gov/REST/rxcui.json');
+  url.searchParams.set('name', term);
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`RxNorm rxcui lookup error: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    idGroup?: {
+      rxnormId?: string[];
+    };
+  };
+
+  return payload.idGroup?.rxnormId?.[0] ?? null;
+}
+
+export async function fetchRxNormInteractionCandidates(params: { medicationName: string; preferredRxcui?: string | null }) {
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+
+  function push(value?: string | null) {
+    if (!value) return;
+    if (seen.has(value)) return;
+    seen.add(value);
+    candidates.push(value);
+  }
+
+  push(params.preferredRxcui);
+
+  if (params.medicationName.trim().length >= 2) {
+    try {
+      const suggestions = await fetchRxNormSuggestions(params.medicationName);
+      const ingredient = suggestions.find((item) => item.tty === 'IN');
+      push(ingredient?.rxcui);
+
+      suggestions.slice(0, 4).forEach((item) => push(item.rxcui));
+    } catch {
+      // best-effort candidate expansion
+    }
+
+    if (candidates.length < 2) {
+      try {
+        const nameRxcui = await fetchRxNormRxcuiForName(params.medicationName);
+        push(nameRxcui);
+      } catch {
+        // best-effort candidate expansion
+      }
+    }
+  }
+
+  return candidates.slice(0, 5);
 }
