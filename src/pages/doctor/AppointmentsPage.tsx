@@ -1,38 +1,91 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DoctorNavigation } from '../../components/DoctorNavigation';
 import { Footer } from '../../components/Footer';
 import { SkipLink } from '../../components/SkipLink';
 import { AppointmentCard, AppointmentRequest } from '../../components/doctor/AppointmentCard';
-const MOCK_REQUESTS: AppointmentRequest[] = [{
-  id: '1',
-  patientName: 'Alice Cooper',
-  date: 'Nov 12, 2023',
-  time: '10:00 AM',
-  reason: 'Persistent headache for 3 days',
-  type: 'Urgent'
-}, {
-  id: '2',
-  patientName: 'James Wilson',
-  date: 'Nov 14, 2023',
-  time: '02:30 PM',
-  reason: 'Annual physical checkup',
-  type: 'New Patient'
-}, {
-  id: '3',
-  patientName: 'Maria Garcia',
-  date: 'Nov 15, 2023',
-  time: '09:15 AM',
-  reason: 'Follow-up on blood pressure medication',
-  type: 'Follow-up'
-}];
+import { fetchAppointmentsByDoctor, updateAppointmentStatus } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import type { Appointment } from '../../types/backend';
+import { Link } from 'react-router-dom';
+import { useToast } from '../../components/ui/Toast';
+import { buildGoogleCalendarEventUrl, sendConsultationAlert } from '../../services/integrations';
+
 export function AppointmentsPage() {
-  const [requests, setRequests] = useState(MOCK_REQUESTS);
-  const handleAccept = (id: string) => {
-    setRequests(requests.filter(r => r.id !== id));
-    alert('Appointment accepted!');
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadAppointments = async () => {
+      if (!profile) return;
+
+      try {
+        const data = await fetchAppointmentsByDoctor(profile.id);
+        setAppointments(data);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load appointments.');
+      }
+    };
+
+    void loadAppointments();
+  }, [profile]);
+
+  const requests: AppointmentRequest[] = appointments
+    .filter((item) => item.status === 'Pending')
+    .map((item) => ({
+      id: item.id,
+      patientName: item.patient?.full_name ?? 'Patient',
+      date: item.appointment_date,
+      time: item.appointment_time,
+      reason: item.reason,
+      type: item.reason.toLowerCase().includes('follow') ? 'Follow-up' : 'New Patient',
+    }));
+
+  const schedule = appointments.filter((item) => item.status === 'Confirmed' || item.status === 'Completed');
+
+  const handleAccept = async (id: string) => {
+    try {
+      const updated = await updateAppointmentStatus(id, 'Confirmed');
+      setAppointments((current) => current.map((item) => (item.id === id ? updated : item)));
+
+      const original = appointments.find((item) => item.id === id);
+      await sendConsultationAlert({
+        doctorName: profile?.full_name ?? 'Doctor',
+        patientName: original?.patient?.full_name ?? 'Patient',
+        doctorEmail: profile?.email,
+        patientEmail: original?.patient?.email,
+        appointmentDate: updated.appointment_date,
+        appointmentTime: updated.appointment_time,
+        appointmentType: updated.appointment_type,
+        meetingLink: updated.meeting_link ?? undefined,
+      }).catch(() => undefined);
+
+      toast.success('Appointment accepted', 'The patient booking has been confirmed.');
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Unable to accept appointment.');
+    }
   };
-  const handleReject = (id: string) => {
-    setRequests(requests.filter(r => r.id !== id));
+
+  const handleReject = async (id: string) => {
+    try {
+      const updated = await updateAppointmentStatus(id, 'Rejected');
+      setAppointments((current) => current.map((item) => (item.id === id ? { ...item, status: 'Rejected' } : item)));
+
+      const original = appointments.find((item) => item.id === id);
+      await sendConsultationAlert({
+        doctorName: profile?.full_name ?? 'Doctor',
+        patientName: original?.patient?.full_name ?? 'Patient',
+        doctorEmail: profile?.email,
+        patientEmail: original?.patient?.email,
+        appointmentDate: updated.appointment_date,
+        appointmentTime: updated.appointment_time,
+        appointmentType: updated.appointment_type,
+        meetingLink: updated.meeting_link ?? undefined,
+      }).catch(() => undefined);
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Unable to reject appointment.');
+    }
   };
   return <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       <SkipLink />
@@ -52,6 +105,7 @@ export function AppointmentsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Pending Requests */}
             <div className="lg:col-span-1 space-y-6">
+              {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
               <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                 Pending Requests
                 <span className="bg-yellow-100 text-yellow-800 text-sm px-3 py-1 rounded-full">
@@ -72,46 +126,42 @@ export function AppointmentsPage() {
               <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
                 <div className="p-6 border-b-2 border-gray-100">
                   <h3 className="text-lg font-bold text-gray-900">
-                    Today, November 10
+                    Upcoming Confirmed Appointments
                   </h3>
                 </div>
                 <div className="divide-y divide-gray-100">
-                  {[{
-                  time: '09:00 AM',
-                  patient: 'Sarah Johnson',
-                  reason: 'Follow-up',
-                  duration: '30 min'
-                }, {
-                  time: '10:00 AM',
-                  patient: 'Michael Chen',
-                  reason: 'New Patient Consultation',
-                  duration: '60 min'
-                }, {
-                  time: '11:30 AM',
-                  patient: 'Emma Davis',
-                  reason: 'Vaccination',
-                  duration: '15 min'
-                }, {
-                  time: '02:00 PM',
-                  patient: 'David Miller',
-                  reason: 'Lab Results Review',
-                  duration: '30 min'
-                }].map((slot, i) => <div key={i} className="p-6 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-gray-50">
+                  {schedule.map((slot) => <div key={slot.id} className="p-6 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-gray-50">
                       <div className="w-32 flex-shrink-0">
                         <p className="text-xl font-bold text-teal-800">
-                          {slot.time}
+                          {slot.appointment_time}
                         </p>
-                        <p className="text-sm text-gray-500">{slot.duration}</p>
+                        <p className="text-sm text-gray-500">30 min</p>
                       </div>
                       <div className="flex-grow">
                         <p className="text-lg font-bold text-gray-900">
-                          {slot.patient}
+                          {slot.patient?.full_name ?? 'Patient'}
                         </p>
                         <p className="text-gray-600">{slot.reason}</p>
                       </div>
-                      <button className="text-teal-700 font-bold hover:underline">
-                        View Details
-                      </button>
+                      <div className="flex flex-col sm:items-end gap-2">
+                        <a
+                          href={buildGoogleCalendarEventUrl({
+                            title: `Consultation with ${slot.patient?.full_name ?? 'Patient'}`,
+                            description: `${slot.appointment_type} consultation${slot.reason ? `\n\nReason: ${slot.reason}` : ''}${slot.meeting_link ? `\n\nMeeting: ${slot.meeting_link}` : ''}`,
+                            location: slot.location,
+                            appointmentDate: slot.appointment_date,
+                            appointmentTime: slot.appointment_time,
+                          })}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-700 font-semibold hover:underline"
+                        >
+                          Add to Google Calendar
+                        </a>
+                        <Link to="/doctor/patients" className="text-teal-700 font-bold hover:underline">
+                          View Details
+                        </Link>
+                      </div>
                     </div>)}
                 </div>
               </div>

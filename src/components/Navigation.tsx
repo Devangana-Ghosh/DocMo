@@ -1,8 +1,24 @@
 import { Link, useLocation } from 'react-router-dom';
+
 export function Navigation() {
   const location = useLocation();
   
-  const navLinks = [
+  // Determine if user is logged in as patient based on current route
+  const isPatientLoggedIn = location.pathname.startsWith('/find-doctor') || 
+                            location.pathname.startsWith('/documents') || 
+                            location.pathname.startsWith('/book') ||
+                            location.pathname.startsWith('/appointments') ||
+                            location.pathname.startsWith('/prescriptions') ||
+                            location.pathname.startsWith('/locations');
+  
+  // Different nav links for logged-in patients vs public
+  const navLinks = isPatientLoggedIn ? [
+    { name: 'Find Doctors', href: '/find-doctor' },
+    { name: 'Appointments', href: '/appointments' },
+    { name: 'Prescriptions', href: '/prescriptions' },
+    { name: 'Medical Documents', href: '/documents' },
+    { name: 'Locations', href: '/locations' }
+  ] : [
     { name: 'About Us', href: '/about' },
     { name: 'Services', href: '/services' },
     { name: 'Contact', href: '/contact' }
@@ -55,15 +71,9 @@ export function Navigation() {
             <div className="flex items-center space-x-4">
               <Link 
                 to="/login" 
-                className="text-gray-600 hover:text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg px-2 py-1"
-              >
-                Help
-              </Link>
-              <Link 
-                to="/login" 
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
-                Sign Up
+                Sign In
               </Link>
             </div>
           </div>
@@ -74,7 +84,7 @@ export function Navigation() {
               to="/login" 
               className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             >
-              Sign Up
+              Sign In
             </Link>
           </div>
         </div>

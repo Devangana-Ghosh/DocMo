@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Navigation } from '../components/Navigation';
 import { Footer } from '../components/Footer';
 import { SkipLink } from '../components/SkipLink';
@@ -6,42 +6,91 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Button } from '../components/ui/Button';
 import { DoctorCard, Doctor } from '../components/DoctorCard';
-import { Search, Filter } from 'lucide-react';
-// Mock data
-const MOCK_DOCTORS: Doctor[] = [{
-  id: '1',
-  name: 'Dr. Sarah Wilson',
-  specialty: 'Cardiologist',
-  rating: 4.9,
-  reviewCount: 124,
-  location: 'Central Heart Institute',
-  nextAvailable: 'Today, 2:00 PM',
-  imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300&h=300',
-  price: '$150'
-}, {
-  id: '2',
-  name: 'Dr. Michael Chen',
-  specialty: 'Dermatologist',
-  rating: 4.8,
-  reviewCount: 89,
-  location: 'Skin Care Center',
-  nextAvailable: 'Tomorrow, 10:00 AM',
-  imageUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=300&h=300',
-  price: '$120'
-}, {
-  id: '3',
-  name: 'Dr. Emily Rodriguez',
-  specialty: 'Pediatrician',
-  rating: 5.0,
-  reviewCount: 215,
-  location: 'Family Health Clinic',
-  nextAvailable: 'Today, 4:30 PM',
-  imageUrl: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=300&h=300',
-  price: '$100'
-}];
+import { Search } from 'lucide-react';
+import { useEffect } from 'react';
+import { fetchProfilesByRole } from '../services/api';
+import type { Profile } from '../types/backend';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchDoctorAvailability, lookupDoctorInNpiRegistry } from '../services/integrations';
 export function FindDoctorPage() {
+  const { profile, loading: authLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [specialty, setSpecialty] = useState('');
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [sortBy, setSortBy] = useState<'availability' | 'rating' | 'price'>('availability');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadDoctors = async () => {
+      if (authLoading) return;
+      if (!profile) {
+        setDoctors([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError('');
+        const profiles = await fetchProfilesByRole('doctor');
+        const mapped = profiles.map((profile: Profile) => ({
+          id: profile.id,
+          name: profile.full_name,
+          specialty: profile.specialty ?? 'General Physician',
+          rating: 4.8,
+          reviewCount: 120,
+          location: 'DocMo Medical Center',
+          nextAvailable: 'Today, 2:00 PM',
+          imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300&h=300',
+          price: '₹1500',
+        }));
+
+        const today = new Date().toISOString().split('T')[0];
+        const enriched = await Promise.all(mapped.slice(0, 20).map(async (doctor) => {
+          const [npi, slots] = await Promise.all([
+            lookupDoctorInNpiRegistry(doctor.name).catch(() => null),
+            fetchDoctorAvailability(doctor.id, today).catch(() => [] as string[]),
+          ]);
+
+          return {
+            ...doctor,
+            npiNumber: npi?.npiNumber,
+            location: npi?.cityState ?? doctor.location,
+            nextAvailable: slots[0] ? `Today, ${slots[0]}` : doctor.nextAvailable,
+          };
+        }));
+
+        setDoctors(enriched);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load doctors.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadDoctors();
+  }, [authLoading, profile]);
+
+  const filteredDoctors = doctors.filter((doctor) => {
+    const matchesSearch =
+      doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSpecialty = !specialty || doctor.specialty.toLowerCase().includes(specialty.toLowerCase());
+    return matchesSearch && matchesSpecialty;
+  }).sort((a, b) => {
+    if (sortBy === 'rating') {
+      return b.rating - a.rating;
+    }
+
+    if (sortBy === 'price') {
+      const aPrice = Number(a.price.replace(/[^\d]/g, ''));
+      const bPrice = Number(b.price.replace(/[^\d]/g, ''));
+      return aPrice - bPrice;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
   const specialties = [{
     value: 'cardiology',
     label: 'Cardiology'
@@ -88,7 +137,7 @@ export function FindDoctorPage() {
                 <Select label="Specialty" options={specialties} value={specialty} onChange={e => setSpecialty(e.target.value)} />
               </div>
               <div className="md:col-span-3 mb-6">
-                <Button className="w-full" size="lg">
+                <Button className="w-full" size="lg" type="button">
                   Search Doctors
                 </Button>
               </div>
@@ -99,20 +148,22 @@ export function FindDoctorPage() {
           <section aria-label="Search Results">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
-                {MOCK_DOCTORS.length} Doctors Available
+                {filteredDoctors.length} Doctors Available
               </h2>
               <div className="flex items-center gap-2">
                 <span className="text-gray-700 font-medium">Sort by:</span>
-                <select className="bg-white border-2 border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:border-blue-800 focus:ring-4 focus:ring-yellow-400" aria-label="Sort doctors">
-                  <option>Availability</option>
-                  <option>Rating</option>
-                  <option>Price: Low to High</option>
+                <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="bg-white border-2 border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:border-blue-800 focus:ring-4 focus:ring-yellow-400" aria-label="Sort doctors">
+                  <option value="availability">Availability</option>
+                  <option value="rating">Rating</option>
+                  <option value="price">Price: Low to High</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-6">
-              {MOCK_DOCTORS.map(doctor => <DoctorCard key={doctor.id} doctor={doctor} />)}
+              {loading && <div className="text-lg text-gray-600">Loading doctors...</div>}
+              {!loading && error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
+              {!loading && !error && filteredDoctors.map(doctor => <DoctorCard key={doctor.id} doctor={doctor} />)}
             </div>
           </section>
         </div>

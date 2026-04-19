@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search, User } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-interface Patient {
+export interface Patient {
   id: string;
   name: string;
   mrn: string;
@@ -12,39 +12,16 @@ interface Patient {
 interface PatientLookupProps {
   onSelectPatient: (patient: Patient) => void;
   selectedPatient: Patient | null;
+  patients: Patient[];
 }
-const MOCK_PATIENTS: Patient[] = [{
-  id: '1',
-  name: 'John Doe',
-  mrn: 'MRN-1024',
-  dob: '1978-05-12',
-  gender: 'Male'
-}, {
-  id: '2',
-  name: 'Jane Smith',
-  mrn: 'MRN-1025',
-  dob: '1991-08-23',
-  gender: 'Female'
-}, {
-  id: '3',
-  name: 'Robert Johnson',
-  mrn: 'MRN-1026',
-  dob: '1965-03-15',
-  gender: 'Male'
-}, {
-  id: '4',
-  name: 'Emily Davis',
-  mrn: 'MRN-1027',
-  dob: '1999-11-30',
-  gender: 'Female'
-}];
 export function PatientLookup({
   onSelectPatient,
-  selectedPatient
+  selectedPatient,
+  patients,
 }: PatientLookupProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showResults, setShowResults] = useState(false);
-  const filteredPatients = MOCK_PATIENTS.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.mrn.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredPatients = patients.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.mrn.toLowerCase().includes(searchTerm.toLowerCase()));
   const handleSelect = (patient: Patient) => {
     onSelectPatient(patient);
     setShowResults(false);
@@ -68,7 +45,7 @@ export function PatientLookup({
                 <p className="text-gray-600">{selectedPatient.mrn}</p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => onSelectPatient(null as any)} className="text-gray-700 border-gray-300">
+            <Button variant="outline" onClick={() => onSelectPatient(null as unknown as Patient)} className="text-gray-700 border-gray-300">
               Change
             </Button>
           </div>

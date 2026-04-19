@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DoctorNavigation } from '../../components/DoctorNavigation';
 import { Footer } from '../../components/Footer';
 import { SkipLink } from '../../components/SkipLink';
@@ -6,51 +6,73 @@ import { Input } from '../../components/ui/Input';
 import { PatientCard, Patient } from '../../components/doctor/PatientCard';
 import { MedicalRecordViewer } from '../../components/doctor/MedicalRecordViewer';
 import { Search } from 'lucide-react';
-const MOCK_PATIENTS: Patient[] = [{
-  id: '1',
-  name: 'John Doe',
-  age: 45,
-  gender: 'Male',
-  lastVisit: 'Oct 12, 2023',
-  conditions: ['Hypertension', 'Diabetes'],
-  status: 'Active'
-}, {
-  id: '2',
-  name: 'Jane Smith',
-  age: 32,
-  gender: 'Female',
-  lastVisit: 'Sep 28, 2023',
-  conditions: ['Asthma'],
-  status: 'Active'
-}, {
-  id: '3',
-  name: 'Robert Johnson',
-  age: 58,
-  gender: 'Male',
-  lastVisit: 'Aug 15, 2023',
-  conditions: ['Arthritis'],
-  status: 'Inactive'
-}, {
-  id: '4',
-  name: 'Emily Davis',
-  age: 24,
-  gender: 'Female',
-  lastVisit: 'Nov 01, 2023',
-  conditions: ['Migraine'],
-  status: 'Active'
-}];
+import { fetchDoctorPatientRecord, fetchDoctorPatients } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import type { Appointment, LabReport, MedicalDocument, Prescription } from '../../types/backend';
+
 export function PatientsPage() {
+  const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
-  const [hasConsent, setHasConsent] = useState(false);
-  const filteredPatients = MOCK_PATIENTS.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.conditions.some(c => c.toLowerCase().includes(searchTerm.toLowerCase())));
-  const handleViewRecords = (id: string) => {
-    const patient = MOCK_PATIENTS.find(p => p.id === id);
-    if (patient) {
-      setSelectedPatient(patient);
-      setIsViewerOpen(true);
-      setHasConsent(false); // Reset consent for demo
+  const [recordLoading, setRecordLoading] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<{
+    appointments: Appointment[];
+    prescriptions: Prescription[];
+    documents: MedicalDocument[];
+    labReports: LabReport[];
+  } | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadPatients = async () => {
+      if (!profile) return;
+
+      try {
+        const data = await fetchDoctorPatients(profile.id);
+        const mapped: Patient[] = data.map((patient) => {
+          const birthYear = patient.dob ? new Date(patient.dob).getFullYear() : new Date().getFullYear() - 30;
+          const age = new Date().getFullYear() - birthYear;
+          return {
+            id: patient.id,
+            name: patient.full_name,
+            age,
+            gender: patient.gender ?? 'Unknown',
+            lastVisit: new Date().toLocaleDateString(),
+            conditions: ['General Follow-up'],
+            status: 'Active',
+          };
+        });
+
+        setPatients(mapped);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load patients.');
+      }
+    };
+
+    void loadPatients();
+  }, [profile]);
+
+  const filteredPatients = patients.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.conditions.some(c => c.toLowerCase().includes(searchTerm.toLowerCase())));
+  const handleViewRecords = async (id: string) => {
+    const patient = patients.find(p => p.id === id);
+    if (!patient || !profile) {
+      return;
+    }
+
+    setSelectedPatient(patient);
+    setIsViewerOpen(true);
+    setRecordLoading(true);
+    setSelectedRecord(null);
+
+    try {
+      const data = await fetchDoctorPatientRecord(profile.id, patient.id);
+      setSelectedRecord(data);
+    } catch (recordError) {
+      setError(recordError instanceof Error ? recordError.message : 'Failed to load medical record.');
+    } finally {
+      setRecordLoading(false);
     }
   };
   return <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
@@ -74,6 +96,7 @@ export function PatientsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {error && <div className="col-span-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
             {filteredPatients.map(patient => <PatientCard key={patient.id} patient={patient} onViewRecords={handleViewRecords} />)}
           </div>
 
@@ -85,7 +108,10 @@ export function PatientsPage() {
         </div>
       </main>
 
-      {selectedPatient && <MedicalRecordViewer patient={selectedPatient} isOpen={isViewerOpen} onClose={() => setIsViewerOpen(false)} hasConsent={hasConsent} onRequestConsent={() => setHasConsent(true)} />}
+      {selectedPatient && selectedRecord && <MedicalRecordViewer patient={selectedPatient} isOpen={isViewerOpen} onClose={() => setIsViewerOpen(false)} record={selectedRecord} />}
+      {selectedPatient && isViewerOpen && recordLoading && <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm">
+          <div className="rounded-lg bg-white px-6 py-4 shadow-lg text-gray-700">Loading medical record...</div>
+        </div>}
 
       <Footer />
     </div>;

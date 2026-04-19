@@ -1,4 +1,3 @@
-import React from 'react';
 import { SkipLink } from '../components/SkipLink';
 import { Navigation } from '../components/Navigation';
 import { Hero } from '../components/Hero';

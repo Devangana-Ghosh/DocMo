@@ -6,6 +6,7 @@ export interface Doctor {
   id: string;
   name: string;
   specialty: string;
+  npiNumber?: string;
   rating: number;
   reviewCount: number;
   location: string;
@@ -33,6 +34,7 @@ export function DoctorCard({
             <p className="text-lg text-blue-800 font-medium mb-2">
               {doctor.specialty}
             </p>
+            {doctor.npiNumber && <p className="text-sm text-gray-500 mb-2">NPI: {doctor.npiNumber}</p>}
             <div className="flex items-center gap-2 text-gray-700 mb-2">
               <Star className="w-5 h-5 text-yellow-500 fill-current" aria-hidden="true" />
               <span className="font-bold">{doctor.rating}</span>
