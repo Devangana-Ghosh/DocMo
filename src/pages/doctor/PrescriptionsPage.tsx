@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DoctorNavigation } from '../../components/DoctorNavigation';
 import { Footer } from '../../components/Footer';
 import { SkipLink } from '../../components/SkipLink';
@@ -22,6 +22,7 @@ export function PrescriptionsPage() {
   const [success, setSuccess] = useState('');
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
   const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
+  const detailsPanelRef = useRef<HTMLElement | null>(null);
   const [historyFilter, setHistoryFilter] = useState<'all' | 'active' | 'completed' | 'refill-needed' | 'cancelled'>(() => {
     return (localStorage.getItem('docmo:doctor-rx-filter') as any) ?? 'all';
   });
@@ -135,6 +136,17 @@ export function PrescriptionsPage() {
     setSelectedPrescription(rx);
     setEditingPrescription(null);
   };
+
+  useEffect(() => {
+    if (!selectedPrescription) return;
+
+    const timeout = window.setTimeout(() => {
+      detailsPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      detailsPanelRef.current?.focus();
+    }, 40);
+
+    return () => window.clearTimeout(timeout);
+  }, [selectedPrescription]);
 
   const handleEditPrescription = (rx: Prescription) => {
     setEditingPrescription(rx);
@@ -356,7 +368,7 @@ export function PrescriptionsPage() {
             </div>
           </div>
 
-          {selectedPrescription && <aside className="mt-8 bg-white rounded-xl border-2 border-teal-200 shadow-sm p-6">
+          {selectedPrescription && <aside ref={detailsPanelRef} tabIndex={-1} className="mt-8 bg-white rounded-xl border-2 border-teal-200 shadow-sm p-6 focus:outline-none focus:ring-2 focus:ring-teal-500">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Prescription Details</h2>

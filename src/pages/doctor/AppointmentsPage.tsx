@@ -144,6 +144,16 @@ export function AppointmentsPage() {
                         <p className="text-gray-600">{slot.reason}</p>
                       </div>
                       <div className="flex flex-col sm:items-end gap-2">
+                        {slot.appointment_type === 'Video Call' && (
+                          <a
+                            href={slot.meeting_link ?? 'https://meet.google.com/new'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700"
+                          >
+                            Open Google Meet
+                          </a>
+                        )}
                         <a
                           href={buildGoogleCalendarEventUrl({
                             title: `Consultation with ${slot.patient?.full_name ?? 'Patient'}`,

@@ -26,6 +26,13 @@ function ensure<T>(value: T | null, message: string): T {
   return value;
 }
 
+function normalizeRole(value: unknown): UserRole {
+  if (value === 'doctor' || value === 'lab' || value === 'patient') {
+    return value;
+  }
+  return 'patient';
+}
+
 function buildFallbackProfile(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }, role: UserRole): Profile {
   const email = user.email ?? undefined;
   const fromMetadata = typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : undefined;
@@ -38,6 +45,56 @@ function buildFallbackProfile(user: { id: string; email?: string | null; user_me
     full_name,
     email,
   };
+}
+
+async function ensureCurrentUserProfile(preferredRole?: UserRole) {
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) {
+    throw new ApiError(authError.message);
+  }
+
+  const user = authData.user;
+  if (!user) {
+    throw new ApiError('You are not signed in. Please sign in and try again.');
+  }
+
+  const metadataRole = normalizeRole(user.user_metadata?.role);
+  const role = preferredRole ?? metadataRole;
+  const fullNameFromMetadata = typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name.trim() : '';
+  const fullNameFromEmail = user.email ? user.email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '';
+  const fullName = fullNameFromMetadata || fullNameFromEmail || 'Signed-in user';
+
+  const { data: existing, error: selectError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (selectError) {
+    throw new ApiError(selectError.message);
+  }
+
+  if (existing) {
+    return existing as Profile;
+  }
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('profiles')
+    .insert({
+      id: user.id,
+      role,
+      full_name: fullName,
+    })
+    .select('*')
+    .single();
+
+  if (insertError) {
+    throw new ApiError(
+      `Unable to create your profile row automatically (${insertError.message}). Run the latest Supabase schema/policy update to enable profile creation for new users.`,
+    );
+  }
+
+  return inserted as Profile;
 }
 
 export async function getCurrentProfile() {
@@ -69,7 +126,14 @@ export async function signIn(email: string, password: string, expectedRole?: Use
   }
 
   const user = ensure(data.user, 'User not found after sign-in');
-  return buildFallbackProfile(user, expectedRole ?? 'patient');
+  const fallback = buildFallbackProfile(user, expectedRole ?? 'patient');
+
+  try {
+    const profile = await ensureCurrentUserProfile(expectedRole);
+    return profile;
+  } catch {
+    return fallback;
+  }
 }
 
 export async function signUp(email: string, password: string, role: UserRole, fullName: string, phone?: string) {
@@ -91,6 +155,10 @@ export async function signUp(email: string, password: string, role: UserRole, fu
 
   const user = ensure(data.user, 'User not found after sign-up');
   const needsEmailConfirmation = !data.session;
+
+  if (!needsEmailConfirmation) {
+    void ensureCurrentUserProfile(role).catch(() => undefined);
+  }
 
   return {
     profile: needsEmailConfirmation ? null : buildFallbackProfile(user, role),
@@ -130,6 +198,9 @@ export async function fetchAppointmentsByDoctor(doctorId: string) {
 }
 
 export async function createAppointment(payload: Omit<Appointment, 'id' | 'created_at' | 'status'> & { status?: Appointment['status'] }) {
+  await requireSession();
+  await ensureCurrentUserProfile('patient');
+
   const { data, error } = await supabase
     .from('appointments')
     .insert({
@@ -441,6 +512,18 @@ export async function fetchLabReports() {
   return (data ?? []) as LabReport[];
 }
 
+export async function fetchLabReportsByPatient(patientId: string) {
+  await requireSession();
+  const { data, error } = await supabase
+    .from('lab_reports')
+    .select('*, uploaded_by_profile:profiles!lab_reports_uploaded_by_fkey(id, full_name, role)')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new ApiError(error.message);
+  return (data ?? []) as LabReport[];
+}
+
 export async function submitContactMessage(message: Omit<ContactMessage, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('contact_messages')
@@ -453,6 +536,14 @@ export async function submitContactMessage(message: Omit<ContactMessage, 'id' | 
 }
 
 export async function getLabReportPublicUrl(filePath: string) {
+  const signed = await supabase.storage
+    .from('lab-reports')
+    .createSignedUrl(filePath, 60 * 60);
+
+  if (!signed.error && signed.data?.signedUrl) {
+    return signed.data.signedUrl;
+  }
+
   const { data } = supabase.storage.from('lab-reports').getPublicUrl(filePath);
   return data.publicUrl;
 }
