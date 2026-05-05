@@ -8,8 +8,10 @@ import { fetchPrescriptionsByPatient, requestPrescriptionRefill } from '../servi
 import type { Prescription } from '../types/backend';
 import { useToast } from '../components/ui/Toast';
 import { buildRxNormInfoUrl } from '../services/integrations';
+import { useTranslation } from 'react-i18next';
 
 export function PrescriptionsPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const toast = useToast();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -27,7 +29,7 @@ export function PrescriptionsPage() {
         const data = await fetchPrescriptionsByPatient(profile.id);
         setPrescriptions(data);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load prescriptions.');
+        setError(loadError instanceof Error ? loadError.message : t('patientRx.loadError'));
       } finally {
         setLoading(false);
       }
@@ -57,15 +59,15 @@ export function PrescriptionsPage() {
     try {
       const updated = await requestPrescriptionRefill(prescription.id);
       setPrescriptions((current) => current.map((item) => (item.id === prescription.id ? updated : item)));
-      setSuccess('Refill request sent to your doctor.');
-      toast.success('Refill requested', `${prescription.medication_name} is waiting for doctor approval.`);
+      setSuccess(t('patientRx.refillSuccess'));
+      toast.success(t('patientRx.refillTitle'), t('patientRx.refillMessage', { name: prescription.medication_name }));
     } catch (refillError) {
-      setError(refillError instanceof Error ? refillError.message : 'Unable to request refill.');
+      setError(refillError instanceof Error ? refillError.message : t('patientRx.refillError'));
     }
   };
 
   const handleDownload = (rx: Prescription) => {
-    const text = `${rx.medication_name}\nDosage: ${rx.dosage}\nFrequency: ${rx.frequency}\nDuration: ${rx.duration}\nInstructions: ${rx.instructions}`;
+    const text = `${rx.medication_name}\n${t('patientRx.dosage')}: ${rx.dosage}\n${t('patientRx.frequency')}: ${rx.frequency}\n${t('patientRx.duration')}: ${rx.duration}\n${t('patientRx.instructions')}: ${rx.instructions}`;
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -84,16 +86,16 @@ export function PrescriptionsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              My Prescriptions
+              {t('patientRx.title')}
             </h1>
             <p className="text-xl text-gray-700">
-              View and manage your prescription medications.
+              {t('patientRx.subtitle')}
             </p>
           </div>
 
           {/* Filter Tabs */}
           <div className="mb-8 border-b border-gray-200">
-            <nav className="flex space-x-8" aria-label="Prescription filters">
+            <nav className="flex space-x-8" aria-label={t('patientRx.filterLabel')}>
               {(['all', 'active', 'refill-needed', 'completed', 'cancelled'] as const).map((filterOption) => (
                 <button
                   key={filterOption}
@@ -108,7 +110,7 @@ export function PrescriptionsPage() {
                   `}
                   aria-current={filter === filterOption ? 'page' : undefined}
                 >
-                  {filterOption.replace('-', ' ')}
+                  {t(`patientRx.filters.${filterOption}`)}
                 </button>
               ))}
             </nav>
@@ -120,12 +122,12 @@ export function PrescriptionsPage() {
             {success && <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-700">{success}</div>}
             {loading ? (
               <div className="bg-white rounded-xl border-2 border-gray-200 p-12 text-center">
-                <p className="text-xl text-gray-500">Loading prescriptions...</p>
+                <p className="text-xl text-gray-500">{t('patientRx.loading')}</p>
               </div>
             ) : filteredPrescriptions.length === 0 ? (
               <div className="bg-white rounded-xl border-2 border-gray-200 p-12 text-center">
                 <Pill className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-xl text-gray-500">No {filter !== 'all' ? filter.replace('-', ' ') : ''} prescriptions found.</p>
+                <p className="text-xl text-gray-500">{t('patientRx.noResults', { filter: filter === 'all' ? '' : t(`patientRx.filters.${filter}`) })}</p>
               </div>
             ) : (
               filteredPrescriptions.map((rx) => (
@@ -158,35 +160,35 @@ export function PrescriptionsPage() {
                           <div>
                             <div className="flex items-center text-gray-700 mb-2">
                               <User className="h-5 w-5 mr-2 text-blue-600" />
-                              <span className="text-sm font-medium">Prescribed by:</span>
+                              <span className="text-sm font-medium">{t('patientRx.prescribedBy')}</span>
                             </div>
                             <p className="text-lg ml-7">{rx.doctor?.full_name ?? 'Doctor'}</p>
                           </div>
                           <div>
                             <div className="flex items-center text-gray-700 mb-2">
                               <Calendar className="h-5 w-5 mr-2 text-blue-600" />
-                              <span className="text-sm font-medium">Date:</span>
+                              <span className="text-sm font-medium">{t('patientRx.date')}</span>
                             </div>
                             <p className="text-lg ml-7">{new Date(rx.created_at ?? '').toLocaleDateString()}</p>
                           </div>
                           <div>
                             <div className="flex items-center text-gray-700 mb-2">
                               <FileText className="h-5 w-5 mr-2 text-blue-600" />
-                              <span className="text-sm font-medium">Duration:</span>
+                              <span className="text-sm font-medium">{t('patientRx.duration')}</span>
                             </div>
                             <p className="text-lg ml-7">{rx.duration}</p>
                           </div>
                           <div>
                             <div className="flex items-center text-gray-700 mb-2">
                               <RefreshCw className="h-5 w-5 mr-2 text-blue-600" />
-                              <span className="text-sm font-medium">Refills:</span>
+                              <span className="text-sm font-medium">{t('patientRx.refills')}</span>
                             </div>
                             <p className="text-lg ml-7">{rx.refills_remaining} remaining</p>
                           </div>
                         </div>
 
                         <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-                          <p className="text-sm font-medium text-gray-700 mb-1">Instructions:</p>
+                          <p className="text-sm font-medium text-gray-700 mb-1">{t('patientRx.instructions')}</p>
                           <p className="text-base text-gray-900">{rx.instructions}</p>
                           <a
                             href={buildRxNormInfoUrl({ rxcui: rx.rxcui, medicationName: rx.medication_name })}
@@ -194,7 +196,7 @@ export function PrescriptionsPage() {
                             rel="noopener noreferrer"
                             className="mt-3 inline-block text-sm font-semibold text-blue-700 underline"
                           >
-                            Learn about this medicine
+                            {t('patientRx.learnMore')}
                           </a>
                         </div>
                       </div>
@@ -206,7 +208,7 @@ export function PrescriptionsPage() {
                           className="flex-1 lg:flex-none px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors flex items-center justify-center gap-2"
                         >
                           <Download className="h-5 w-5" />
-                          Download
+                          {t('patientRx.download')}
                         </button>
                         {rx.status === 'Active' && rx.refills_remaining > 0 && (
                           <button 
@@ -214,7 +216,7 @@ export function PrescriptionsPage() {
                             className="flex-1 lg:flex-none px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg font-medium hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors flex items-center justify-center gap-2"
                           >
                             <RefreshCw className="h-5 w-5" />
-                            Request Refill
+                            {t('patientRx.requestRefill')}
                           </button>
                         )}
                         {rx.status === 'Refill Needed' && (
@@ -224,7 +226,7 @@ export function PrescriptionsPage() {
                             className="flex-1 lg:flex-none px-6 py-3 bg-orange-100 text-orange-800 rounded-lg font-medium cursor-not-allowed flex items-center justify-center gap-2"
                           >
                             <RefreshCw className="h-5 w-5" />
-                            Pending Approval
+                            {t('patientRx.pendingApproval')}
                           </button>
                         )}
                       </div>

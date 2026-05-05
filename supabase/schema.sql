@@ -76,6 +76,15 @@ create table if not exists public.lab_reports (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.doctor_availability (
+  id uuid primary key default gen_random_uuid(),
+  doctor_id uuid not null references public.profiles(id) on delete cascade,
+  day_of_week int not null check (day_of_week between 0 and 6),
+  slot_time text not null,
+  created_at timestamptz not null default now(),
+  unique (doctor_id, day_of_week, slot_time)
+);
+
 create or replace function public.handle_new_auth_user()
 returns trigger
 language plpgsql
@@ -118,6 +127,7 @@ alter table public.prescriptions enable row level security;
 alter table public.documents enable row level security;
 alter table public.lab_reports enable row level security;
 alter table public.contact_messages enable row level security;
+alter table public.doctor_availability enable row level security;
 
 create or replace function public.current_profile_role()
 returns text
@@ -155,6 +165,39 @@ drop policy if exists "profiles_self_insert" on public.profiles;
 create policy "profiles_self_insert" on public.profiles
 for insert to authenticated
 with check (auth.uid() = id and role in ('patient', 'doctor', 'lab'));
+
+drop policy if exists "doctor_availability_read" on public.doctor_availability;
+create policy "doctor_availability_read" on public.doctor_availability
+for select to authenticated
+using (true);
+
+drop policy if exists "doctor_availability_doctor_insert" on public.doctor_availability;
+create policy "doctor_availability_doctor_insert" on public.doctor_availability
+for insert to authenticated
+with check (
+  doctor_id = auth.uid()
+  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'doctor')
+);
+
+drop policy if exists "doctor_availability_doctor_update" on public.doctor_availability;
+create policy "doctor_availability_doctor_update" on public.doctor_availability
+for update to authenticated
+using (
+  doctor_id = auth.uid()
+  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'doctor')
+)
+with check (
+  doctor_id = auth.uid()
+  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'doctor')
+);
+
+drop policy if exists "doctor_availability_doctor_delete" on public.doctor_availability;
+create policy "doctor_availability_doctor_delete" on public.doctor_availability
+for delete to authenticated
+using (
+  doctor_id = auth.uid()
+  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'doctor')
+);
 
 drop policy if exists "appointments_patient_read" on public.appointments;
 create policy "appointments_patient_read" on public.appointments

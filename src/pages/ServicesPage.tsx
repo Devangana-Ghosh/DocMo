@@ -5,6 +5,7 @@ import { SkipLink } from '../components/SkipLink';
 import { Button } from '../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { Heart, Stethoscope, Baby, Bone, Brain, Eye, Pill, Activity, Microscope, Syringe } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 interface Service {
   id: string;
   name: string;
@@ -74,6 +75,7 @@ const SERVICES: Service[] = [{
   specialists: 7
 }];
 export function ServicesPage() {
+  const { t } = useTranslation();
   return <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       <SkipLink />
       <Navigation />
@@ -82,12 +84,10 @@ export function ServicesPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-              Our Medical Services
+              {t('services.title')}
             </h1>
             <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-              HealthAccess offers a comprehensive range of medical services
-              delivered by board-certified specialists. From routine checkups to
-              specialized care, we're here for your health journey.
+              {t('services.subtitle')}
             </p>
           </div>
 
@@ -106,14 +106,11 @@ export function ServicesPage() {
                 </p>
 
                 <p className="text-base text-gray-600 mb-6">
-                  <span className="font-bold text-blue-800">
-                    {service.specialists}
-                  </span>{' '}
-                  specialists available
+                  <span className="font-bold text-blue-800">{t('services.specialistsAvailable', { count: service.specialists })}</span>
                 </p>
 
                 <Link to="/find-doctor" className="block">
-                  <Button className="w-full">Find a Specialist</Button>
+                  <Button className="w-full">{t('services.findSpecialist')}</Button>
                 </Link>
               </article>)}
           </div>
@@ -121,19 +118,18 @@ export function ServicesPage() {
           {/* Call to Action */}
           <section className="mt-16 bg-blue-900 rounded-xl p-10 text-center">
             <h2 className="text-3xl font-bold text-white mb-4">
-              Need Help Choosing a Service?
+              {t('services.ctaTitle')}
             </h2>
             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Our patient care coordinators are available to help you find the
-              right specialist and service for your needs.
+              {t('services.ctaSubtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href="tel:1-800-HEALTH" className="inline-flex items-center justify-center px-8 py-4 text-xl font-bold rounded-lg text-blue-900 bg-white hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-yellow-400 min-h-[56px] transition-transform active:scale-95">
-                Call 1-800-HEALTH
+                {t('services.call')}
               </a>
               <Link to="/find-doctor">
                 <Button variant="secondary" className="bg-transparent text-white border-white hover:bg-blue-800">
-                  Browse All Doctors
+                  {t('services.browseDoctors')}
                 </Button>
               </Link>
             </div>

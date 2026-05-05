@@ -10,8 +10,10 @@ import { approvePrescriptionRefill, cancelPrescription, createPrescription, fetc
 import { useAuth } from '../../contexts/AuthContext';
 import type { Prescription, Profile } from '../../types/backend';
 import { useToast } from '../../components/ui/Toast';
+import { useTranslation } from 'react-i18next';
 
 export function PrescriptionsPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const toast = useToast();
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -50,7 +52,7 @@ export function PrescriptionsPage() {
         setPrescriptions(prescriptionsData);
         setPatients(patientsData);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load prescriptions.');
+        setError(loadError instanceof Error ? loadError.message : t('doctorRx.loadError'));
       }
     };
 
@@ -104,8 +106,8 @@ export function PrescriptionsPage() {
         setPrescriptions((current) => current.map((item) => (item.id === updated.id ? updated : item)));
         setSelectedPrescription(updated);
         setEditingPrescription(null);
-        setSuccess('Prescription updated successfully.');
-        toast.success('Prescription updated', `${updated.medication_name} for ${updated.patient?.full_name ?? 'patient'}.`);
+        setSuccess(t('doctorRx.updateSuccess'));
+        toast.success(t('doctorRx.updatedTitle'), `${updated.medication_name} for ${updated.patient?.full_name ?? t('doctorRx.patientFallback')}.`);
         return;
       }
 
@@ -125,10 +127,10 @@ export function PrescriptionsPage() {
       });
 
       setPrescriptions((current) => [created, ...current]);
-      setSuccess('Prescription issued successfully.');
-      toast.success('Prescription issued', `${created.medication_name} has been sent to ${created.patient?.full_name ?? 'the patient'}.`);
+      setSuccess(t('doctorRx.issueSuccess'));
+      toast.success(t('doctorRx.issuedTitle'), `${created.medication_name} has been sent to ${created.patient?.full_name ?? t('doctorRx.patientFallback')}.`);
     } catch (issueError) {
-      setError(issueError instanceof Error ? issueError.message : 'Failed to issue prescription.');
+      setError(issueError instanceof Error ? issueError.message : t('doctorRx.issueError'));
     }
   };
 
@@ -159,9 +161,9 @@ export function PrescriptionsPage() {
       const updated = await cancelPrescription(rx.id);
       setPrescriptions((current) => current.map((item) => (item.id === rx.id ? updated : item)));
       setSelectedPrescription(updated);
-      toast.warning('Prescription cancelled', `${updated.medication_name} is now marked as cancelled.`);
+      toast.warning(t('doctorRx.cancelledTitle'), `${updated.medication_name} is now marked as cancelled.`);
     } catch (cancelError) {
-      setError(cancelError instanceof Error ? cancelError.message : 'Failed to cancel prescription.');
+      setError(cancelError instanceof Error ? cancelError.message : t('doctorRx.cancelError'));
     }
   };
 
@@ -170,9 +172,9 @@ export function PrescriptionsPage() {
       const updated = await approvePrescriptionRefill(rx.id, rx.refills_remaining);
       setPrescriptions((current) => current.map((item) => (item.id === rx.id ? updated : item)));
       setSelectedPrescription(updated);
-      toast.success('Refill approved', `${updated.medication_name} has been approved.`);
+      toast.success(t('doctorRx.refillApprovedTitle'), `${updated.medication_name} has been approved.`);
     } catch (approveError) {
-      setError(approveError instanceof Error ? approveError.message : 'Failed to approve refill request.');
+      setError(approveError instanceof Error ? approveError.message : t('doctorRx.refillError'));
     }
   };
 
@@ -227,7 +229,7 @@ export function PrescriptionsPage() {
   const handleGenerateReport = (rx: Prescription) => {
     setSelectedReportData({
       ...mockReportTemplate,
-      patientName: rx.patient?.full_name ?? 'Patient',
+      patientName: rx.patient?.full_name ?? t('doctorRx.patientFallback'),
       date: new Date(rx.created_at ?? new Date().toISOString()).toLocaleDateString(),
       medicines: [
         { name: rx.medication_name, dosage: rx.dosage, frequency: rx.frequency, duration: rx.duration },
@@ -247,10 +249,10 @@ export function PrescriptionsPage() {
           <div className="mb-10 flex justify-between items-end">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                Prescriptions
+                {t('doctorRx.title')}
               </h1>
               <p className="text-xl text-gray-600">
-                Issue digital prescriptions and view history.
+                {t('doctorRx.subtitle')}
               </p>
             </div>
           </div>
@@ -260,13 +262,13 @@ export function PrescriptionsPage() {
             <div className="lg:col-span-2">
               {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
               {success && <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div>}
-              <PrescriptionForm patientOptions={patientOptions} existingPrescriptions={prescriptions} onSubmitPrescription={handleIssuePrescription} initialValues={formInitialValues} submitLabel={editingPrescription ? 'Update Prescription' : 'Issue Prescription'} />
+              <PrescriptionForm patientOptions={patientOptions} existingPrescriptions={prescriptions} onSubmitPrescription={handleIssuePrescription} initialValues={formInitialValues} submitLabel={editingPrescription ? t('doctorRx.updatedTitle') : t('doctorRx.issuedTitle')} />
 
               <section className="mt-8 bg-white rounded-xl border-2 border-blue-200 shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-blue-100 bg-blue-50 flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Refill Requests</h2>
-                    <p className="text-sm text-gray-600">Pending patient requests that need doctor approval.</p>
+                    <h2 className="text-xl font-bold text-gray-900">{t('doctorRx.refillRequests')}</h2>
+                    <p className="text-sm text-gray-600">{t('doctorRx.refillHelp')}</p>
                   </div>
                   <span className="inline-flex items-center rounded-full bg-blue-600 px-3 py-1 text-sm font-bold text-white">
                     {refillRequests.length}
@@ -274,13 +276,13 @@ export function PrescriptionsPage() {
                 </div>
 
                 {refillRequests.length === 0 ? (
-                  <div className="p-6 text-sm text-gray-600">No refill requests pending right now.</div>
+                  <div className="p-6 text-sm text-gray-600">{t('doctorRx.noRefill')}</div>
                 ) : (
                   <div className="divide-y divide-gray-100">
                     {refillRequests.map((rx) => (
                       <div key={rx.id} className="p-4 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-center">
                         <div>
-                          <p className="font-semibold text-gray-900">{rx.patient?.full_name ?? 'Patient'} • {rx.medication_name}</p>
+                          <p className="font-semibold text-gray-900">{rx.patient?.full_name ?? t('doctorRx.patientFallback')} • {rx.medication_name}</p>
                           <p className="text-sm text-gray-600">{rx.dosage} • {rx.frequency} • {rx.refills_remaining} refills available</p>
                         </div>
                         <div className="flex flex-wrap gap-2 md:justify-end">
@@ -288,13 +290,13 @@ export function PrescriptionsPage() {
                             onClick={() => handleSelectPrescription(rx)}
                             className="px-3 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                           >
-                            Details
+                            {t('doctorRx.details')}
                           </button>
                           <button
                             onClick={() => handleApproveRefill(rx)}
                             className="px-3 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                           >
-                            Approve
+                            {t('doctorRx.approve')}
                           </button>
                         </div>
                       </div>
@@ -310,16 +312,16 @@ export function PrescriptionsPage() {
                 <div className="p-6 border-b-2 border-gray-100 bg-gray-50">
                   <div className="flex items-center justify-between gap-3">
                     <h2 className="text-xl font-bold text-gray-900">
-                      Recent History
+                      {t('doctorRx.recentHistory')}
                     </h2>
                     <select
                       value={historySort}
                       onChange={(e) => setHistorySort(e.target.value as typeof historySort)}
                       className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
                     >
-                      <option value="newest">Newest</option>
-                      <option value="oldest">Oldest</option>
-                      <option value="patient">Patient</option>
+                      <option value="newest">{t('doctorRx.sortNewest')}</option>
+                      <option value="oldest">{t('doctorRx.sortOldest')}</option>
+                      <option value="patient">{t('doctorRx.sortPatient')}</option>
                     </select>
                   </div>
                 </div>
@@ -329,18 +331,18 @@ export function PrescriptionsPage() {
                     onChange={(e) => setHistoryFilter(e.target.value as typeof historyFilter)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   >
-                    <option value="all">All statuses</option>
-                    <option value="active">Active</option>
-                    <option value="completed">Completed</option>
-                    <option value="refill-needed">Refill needed</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="all">{t('doctorRx.filterAll')}</option>
+                    <option value="active">{t('doctorRx.filterActive')}</option>
+                    <option value="completed">{t('doctorRx.filterCompleted')}</option>
+                    <option value="refill-needed">{t('doctorRx.filterRefill')}</option>
+                    <option value="cancelled">{t('doctorRx.filterCancelled')}</option>
                   </select>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {visibleHistory.map((rx) => (
                     <div key={rx.id} className="p-4 hover:bg-gray-50 transition">
                       <div className="flex justify-between items-start mb-1">
-                        <p className="font-bold text-gray-900">{rx.patient?.full_name ?? 'Patient'}</p>
+                        <p className="font-bold text-gray-900">{rx.patient?.full_name ?? t('doctorRx.patientFallback')}</p>
                         <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                           {new Date(rx.created_at ?? new Date().toISOString()).toLocaleDateString()}
                         </span>
@@ -348,12 +350,12 @@ export function PrescriptionsPage() {
                       <p className="text-teal-700 font-medium mb-3">{rx.medication_name}</p>
                       <div className="flex gap-2">
                         <button onClick={() => handleSelectPrescription(rx)} className="flex-1 flex items-center justify-center gap-1 text-sm font-bold text-gray-600 bg-white border border-gray-300 py-1.5 rounded hover:bg-gray-50 transition">
-                          <Eye className="h-4 w-4" /> Details
+                          <Eye className="h-4 w-4" /> {t('doctorRx.details')}
                         </button>
                         <button
                           onClick={() => handleGenerateReport(rx)}
                           className="flex-1 flex items-center justify-center gap-1 text-sm font-bold text-teal-700 bg-teal-50 border border-teal-200 py-1.5 rounded hover:bg-teal-100 shadow-sm transition">
-                          <FilePlus className="h-4 w-4" /> Report
+                          <FilePlus className="h-4 w-4" /> {t('doctorRx.report')}
                         </button>
                       </div>
                     </div>
@@ -361,7 +363,7 @@ export function PrescriptionsPage() {
                 </div>
                 <div className="p-4 bg-gray-50 border-t border-gray-200 text-center">
                   <button className="text-teal-700 font-bold hover:underline" onClick={() => setSelectedPrescription(null)}>
-                    View All History
+                    {t('doctorRx.viewAll')}
                   </button>
                 </div>
               </div>
@@ -371,37 +373,37 @@ export function PrescriptionsPage() {
           {selectedPrescription && <aside ref={detailsPanelRef} tabIndex={-1} className="mt-8 bg-white rounded-xl border-2 border-teal-200 shadow-sm p-6 focus:outline-none focus:ring-2 focus:ring-teal-500">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Prescription Details</h2>
-                <p className="text-gray-600">{selectedPrescription.patient?.full_name ?? 'Patient'} • {selectedPrescription.medication_name}</p>
+                <h2 className="text-2xl font-bold text-gray-900">{t('doctorRx.panelTitle')}</h2>
+                <p className="text-gray-600">{selectedPrescription.patient?.full_name ?? t('doctorRx.patientFallback')} • {selectedPrescription.medication_name}</p>
               </div>
-              <button className="text-gray-500 hover:text-gray-800" onClick={() => setSelectedPrescription(null)}>Close</button>
+              <button className="text-gray-500 hover:text-gray-800" onClick={() => setSelectedPrescription(null)}>{t('doctorRx.close')}</button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div><span className="font-bold text-gray-700">Dosage:</span> {selectedPrescription.dosage}</div>
-              <div><span className="font-bold text-gray-700">Frequency:</span> {selectedPrescription.frequency}</div>
-              <div><span className="font-bold text-gray-700">Duration:</span> {selectedPrescription.duration}</div>
-              <div><span className="font-bold text-gray-700">Refills:</span> {selectedPrescription.refills_remaining}</div>
-              <div><span className="font-bold text-gray-700">Status:</span> {selectedPrescription.status}</div>
-              <div><span className="font-bold text-gray-700">Created:</span> {new Date(selectedPrescription.created_at ?? '').toLocaleString()}</div>
-              <div><span className="font-bold text-gray-700">RxNorm:</span> {selectedPrescription.rxnorm_verified ? `Verified (RxCUI ${selectedPrescription.rxcui ?? 'N/A'})` : 'Not verified'}</div>
-              {selectedPrescription.medication_normalized && <div><span className="font-bold text-gray-700">Normalized Name:</span> {selectedPrescription.medication_normalized}</div>}
+              <div><span className="font-bold text-gray-700">{t('doctorRx.dosage')}:</span> {selectedPrescription.dosage}</div>
+              <div><span className="font-bold text-gray-700">{t('doctorRx.frequency')}:</span> {selectedPrescription.frequency}</div>
+              <div><span className="font-bold text-gray-700">{t('doctorRx.duration')}:</span> {selectedPrescription.duration}</div>
+              <div><span className="font-bold text-gray-700">{t('doctorRx.refills')}:</span> {selectedPrescription.refills_remaining}</div>
+              <div><span className="font-bold text-gray-700">{t('doctorRx.status')}:</span> {selectedPrescription.status}</div>
+              <div><span className="font-bold text-gray-700">{t('doctorRx.created')}:</span> {new Date(selectedPrescription.created_at ?? '').toLocaleString()}</div>
+              <div><span className="font-bold text-gray-700">{t('doctorRx.rxnorm')}:</span> {selectedPrescription.rxnorm_verified ? `${t('doctorRx.verified')} (RxCUI ${selectedPrescription.rxcui ?? 'N/A'})` : t('doctorRx.notVerified')}</div>
+              {selectedPrescription.medication_normalized && <div><span className="font-bold text-gray-700">{t('doctorRx.normalizedName')}:</span> {selectedPrescription.medication_normalized}</div>}
             </div>
 
             <div className="mt-4 bg-gray-50 rounded-lg border border-gray-200 p-4">
-              <p className="font-bold text-gray-700 mb-1">Instructions</p>
+              <p className="font-bold text-gray-700 mb-1">{t('doctorRx.instructions')}</p>
               <p className="text-gray-900 whitespace-pre-wrap">{selectedPrescription.instructions}</p>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
               {selectedPrescription.status === 'Refill Needed' && selectedPrescription.refills_remaining > 0 && <button className="px-4 py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700" onClick={() => handleApproveRefill(selectedPrescription)}>
-                  Approve Refill
+                  {t('doctorRx.approveRefill')}
                 </button>}
               <button className="px-4 py-2 rounded-lg bg-teal-700 text-white font-bold hover:bg-teal-800" onClick={() => handleEditPrescription(selectedPrescription)}>
-                <Pencil className="inline h-4 w-4 mr-2" />Edit
+                <Pencil className="inline h-4 w-4 mr-2" />{t('doctorRx.edit')}
               </button>
               {selectedPrescription.status !== 'Cancelled' && <button className="px-4 py-2 rounded-lg bg-white border-2 border-red-500 text-red-700 font-bold hover:bg-red-50" onClick={() => handleCancelPrescription(selectedPrescription)}>
-                <X className="inline h-4 w-4 mr-2" />Cancel
+                <X className="inline h-4 w-4 mr-2" />{t('doctorRx.cancel')}
               </button>}
             </div>
           </aside>}

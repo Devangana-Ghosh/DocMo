@@ -5,8 +5,10 @@ import { Navigation } from '../../components/Navigation';
 import { Footer } from '../../components/Footer';
 import { User, Mail, Lock, Eye, EyeOff, Phone } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export function PatientLoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -29,7 +31,7 @@ export function PatientLoginPage() {
       if (isSignUpMode) {
         const result = await signUpWithPassword(email, password, 'patient', fullName.trim(), phone.trim());
         if (result.needsEmailConfirmation) {
-          setSuccess('Account created. Check your email to confirm, then sign in.');
+          setSuccess(t('auth.successConfirmEmail'));
           setIsSignUpMode(false);
         } else {
           navigate('/find-doctor');
@@ -39,7 +41,7 @@ export function PatientLoginPage() {
         navigate('/find-doctor');
       }
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : 'Unable to sign in.');
+      setError(authError instanceof Error ? authError.message : t('auth.unableSignIn'));
     } finally {
       setIsLoading(false);
     }
@@ -63,11 +65,11 @@ export function PatientLoginPage() {
                   </div>
                   
                   <h2 className="text-3xl font-bold text-gray-800 mb-6">
-                    Patient Portal
+                    {t('auth.patient.portalTitle')}
                   </h2>
                   
                   <p className="text-gray-600 text-lg leading-relaxed">
-                    Manage your health journey with easy access to appointments, records, and prescriptions.
+                    {t('auth.patient.portalDesc')}
                   </p>
                 </div>
               </div>
@@ -78,10 +80,10 @@ export function PatientLoginPage() {
               <div className="max-w-md w-full">
                 <div className="text-center mb-8">
                   <h1 className="text-4xl font-bold text-gray-800 mb-4">
-                    {isSignUpMode ? 'Create Patient Account' : 'Patient Login'}
+                    {isSignUpMode ? t('auth.patient.signupTitle') : t('auth.patient.loginTitle')}
                   </h1>
                   <p className="text-gray-600 text-lg">
-                    {isSignUpMode ? 'Create your account to access patient services' : 'Enter your credentials to access your account'}
+                    {isSignUpMode ? t('auth.patient.signupSubtitle') : t('auth.patient.loginSubtitle')}
                   </p>
                 </div>
 
@@ -101,7 +103,7 @@ export function PatientLoginPage() {
                     <>
                       <div>
                         <label htmlFor="full-name" className="block text-sm font-medium text-gray-700 mb-2">
-                          Full Name
+                          {t('auth.fullName')}
                         </label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -115,13 +117,13 @@ export function PatientLoginPage() {
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                             className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg placeholder-gray-400"
-                            placeholder="Your full name"
+                            placeholder={t('auth.fullName')}
                           />
                         </div>
                       </div>
                       <div>
                         <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                          Phone Number
+                          {t('auth.phoneNumber')}
                         </label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -135,7 +137,7 @@ export function PatientLoginPage() {
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                             className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg placeholder-gray-400"
-                            placeholder="+1 (555) 123-4567"
+                            placeholder={t('auth.phonePlaceholder')}
                           />
                         </div>
                       </div>
@@ -145,7 +147,7 @@ export function PatientLoginPage() {
                   {/* Email Field */}
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Address
+                      {t('auth.emailAddress')}
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -160,7 +162,7 @@ export function PatientLoginPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg placeholder-gray-400"
-                        placeholder="you@example.com"
+                        placeholder={t('auth.emailPlaceholder')}
                       />
                     </div>
                   </div>
@@ -169,13 +171,13 @@ export function PatientLoginPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                        Password
+                        {t('auth.password')}
                       </label>
                       <button
                         type="button"
                         className="text-sm text-blue-600 hover:text-blue-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                       >
-                        Forgot password?
+                        {t('auth.forgotPassword')}
                       </button>
                     </div>
                     <div className="relative">
@@ -191,7 +193,7 @@ export function PatientLoginPage() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full pl-12 pr-12 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg placeholder-gray-400"
-                        placeholder="••••••••"
+                        placeholder={t('auth.passwordPlaceholder')}
                       />
                       <button
                         type="button"
@@ -213,12 +215,12 @@ export function PatientLoginPage() {
                     disabled={isLoading}
                     className="w-full bg-blue-600 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isLoading ? (isSignUpMode ? 'Creating Account...' : 'Signing In...') : (isSignUpMode ? 'Create Account' : 'Sign In')}
+                    {isLoading ? (isSignUpMode ? t('auth.creatingAccount') : t('auth.signingIn')) : (isSignUpMode ? t('auth.createAccount') : t('auth.signIn'))}
                   </button>
                 </form>
 
                 <div className="mt-6 text-center text-sm text-gray-600">
-                  {isSignUpMode ? 'Already have an account?' : "Don't have an account?"}{' '}
+                  {isSignUpMode ? t('auth.alreadyHave') : t('auth.dontHave')}{' '}
                   <button
                     type="button"
                     className="font-semibold text-blue-700 hover:underline"
@@ -228,7 +230,7 @@ export function PatientLoginPage() {
                       setSuccess('');
                     }}
                   >
-                    {isSignUpMode ? 'Sign in' : 'Sign up'}
+                    {isSignUpMode ? t('auth.switchSignIn') : t('auth.switchSignUp')}
                   </button>
                 </div>
               </div>

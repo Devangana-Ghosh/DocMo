@@ -4,16 +4,18 @@ import { SkipLink } from '../components/SkipLink';
 import { Navigation } from '../components/Navigation';
 import { Footer } from '../components/Footer';
 import { User, Stethoscope, FlaskConical } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
   const roles = [
     {
       id: 'patient',
-      title: 'Patient',
-      description: 'Access your medical records, book appointments, and manage prescriptions.',
+      title: t('login.roles.patient.title'),
+      description: t('login.roles.patient.description'),
       icon: User,
       route: '/login/patient',
       bgColor: 'bg-blue-50',
@@ -22,8 +24,8 @@ export function LoginPage() {
     },
     {
       id: 'doctor',
-      title: 'Doctor', 
-      description: 'Manage patient consultations, view schedules, and access clinical tools.',
+      title: t('login.roles.doctor.title'),
+      description: t('login.roles.doctor.description'),
       icon: Stethoscope,
       route: '/login/doctor',
       bgColor: 'bg-blue-50',
@@ -32,8 +34,8 @@ export function LoginPage() {
     },
     {
       id: 'lab',
-      title: 'Lab Technician',
-      description: 'Process lab requests, upload results, and manage test workflows.',
+      title: t('login.roles.lab.title'),
+      description: t('login.roles.lab.description'),
       icon: FlaskConical,
       route: '/login/lab',
       bgColor: 'bg-blue-50',
@@ -66,13 +68,12 @@ export function LoginPage() {
                 </svg>
               </div>
               <h1 className="text-5xl font-bold text-gray-800">
-                Welcome to <span className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700 bg-clip-text text-transparent">docmo</span>
+                {t('login.welcome')} <span className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700 bg-clip-text text-transparent">docmo</span>
               </h1>
             </div>
 
             <p className="mt-6 max-w-3xl mx-auto text-xl text-gray-600 leading-relaxed font-medium">
-              Your trusted healthcare companion. Select your role to access <br />
-              personalized features and services.
+              {t('login.subtitle')}
             </p>
 
             {/* Role Selection Cards */}
@@ -118,7 +119,7 @@ export function LoginPage() {
                     {isSelected && (
                       <div className="absolute inset-0 rounded-2xl bg-blue-500 bg-opacity-10 flex items-center justify-center">
                         <div className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold text-lg">
-                          Opening login...
+                          {t('login.opening')}
                         </div>
                       </div>
                     )}

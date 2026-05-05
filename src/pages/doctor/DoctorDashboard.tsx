@@ -7,8 +7,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchAppointmentsByDoctor, fetchDoctorPatients, fetchPrescriptionsByDoctor } from '../../services/api';
 import type { Appointment } from '../../types/backend';
+import { useTranslation } from 'react-i18next';
 
 export function DoctorDashboard() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patientCount, setPatientCount] = useState(0);
@@ -34,25 +36,25 @@ export function DoctorDashboard() {
 
   const stats = [
     {
-      label: 'Total Patients',
+      label: t('doctorDashboard.totalPatients'),
       value: String(patientCount),
       icon: Users,
       color: 'bg-blue-100 text-blue-800',
     },
     {
-      label: "Today's Appointments",
+      label: t('doctorDashboard.todayAppointments'),
       value: String(appointments.filter((item) => item.status === 'Confirmed' || item.status === 'Pending').length),
       icon: Calendar,
       color: 'bg-green-100 text-green-800',
     },
     {
-      label: 'Pending Requests',
+      label: t('doctorDashboard.pendingRequests'),
       value: String(appointments.filter((item) => item.status === 'Pending').length),
       icon: Clock,
       color: 'bg-yellow-100 text-yellow-800',
     },
     {
-      label: 'Active Prescriptions',
+      label: t('doctorDashboard.activePrescriptions'),
       value: String(prescriptionCount),
       icon: FileText,
       color: 'bg-purple-100 text-purple-800',
@@ -72,10 +74,10 @@ export function DoctorDashboard() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Welcome back, {profile?.full_name ?? 'Doctor'}
+              {t('doctorDashboard.welcome', { name: profile?.full_name ?? t('doctorDashboard.doctorFallback') })}
             </h1>
             <p className="text-xl text-gray-600">
-              Here's what's happening in your practice today.
+              {t('doctorDashboard.subtitle')}
             </p>
           </div>
 
@@ -98,10 +100,10 @@ export function DoctorDashboard() {
               <section className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
                 <div className="p-6 border-b-2 border-gray-100 flex justify-between items-center">
                   <h2 className="text-2xl font-bold text-gray-900">
-                    Upcoming Appointments
+                    {t('doctorDashboard.upcoming')}
                   </h2>
                   <Link to="/doctor/appointments" className="text-teal-700 font-bold hover:underline flex items-center">
-                    View All <ArrowRight className="ml-1 h-5 w-5" />
+                    {t('doctorDashboard.viewAll')} <ArrowRight className="ml-1 h-5 w-5" />
                   </Link>
                 </div>
                 <div className="divide-y divide-gray-100">
@@ -112,7 +114,7 @@ export function DoctorDashboard() {
                         </span>
                         <div>
                           <p className="text-lg font-bold text-gray-900">
-                            {appointment.patient?.full_name ?? 'Patient'}
+                            {appointment.patient?.full_name ?? t('doctorDashboard.patientFallback')}
                           </p>
                           <p className="text-gray-600">{appointment.reason}</p>
                         </div>
@@ -121,37 +123,37 @@ export function DoctorDashboard() {
                         {appointment.status}
                       </span>
                     </div>)}
-                  {upcoming.length === 0 && <div className="p-6 text-gray-600">No upcoming appointments.</div>}
+                  {upcoming.length === 0 && <div className="p-6 text-gray-600">{t('doctorDashboard.noUpcoming')}</div>}
                 </div>
               </section>
             </div>
 
             <div className="space-y-6">
               <section className="bg-teal-800 text-white rounded-xl p-8 shadow-lg">
-                <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
+                <h2 className="text-2xl font-bold mb-6">{t('doctorDashboard.quickActions')}</h2>
                 <div className="space-y-4">
                   <Link to="/doctor/prescriptions" className="block w-full bg-white/10 hover:bg-white/20 border-2 border-white/20 rounded-lg p-4 text-left transition-colors">
                     <span className="font-bold block text-lg">
-                      New Prescription
+                      {t('doctorDashboard.newPrescription')}
                     </span>
                     <span className="text-teal-100 text-sm">
-                      Issue digital RX instantly
+                      {t('doctorDashboard.newPrescriptionHelp')}
                     </span>
                   </Link>
                   <Link to="/doctor/patients" className="block w-full bg-white/10 hover:bg-white/20 border-2 border-white/20 rounded-lg p-4 text-left transition-colors">
                     <span className="font-bold block text-lg">
-                      Find Patient
+                      {t('doctorDashboard.findPatient')}
                     </span>
                     <span className="text-teal-100 text-sm">
-                      Search medical records
+                      {t('doctorDashboard.findPatientHelp')}
                     </span>
                   </Link>
                   <Link to="/doctor/availability" className="block w-full bg-white/10 hover:bg-white/20 border-2 border-white/20 rounded-lg p-4 text-left transition-colors">
                     <span className="font-bold block text-lg">
-                      Update Schedule
+                      {t('doctorDashboard.updateSchedule')}
                     </span>
                     <span className="text-teal-100 text-sm">
-                      Manage availability
+                      {t('doctorDashboard.updateScheduleHelp')}
                     </span>
                   </Link>
                 </div>

@@ -6,7 +6,9 @@ import { FileText, Upload, CheckCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchLabReports } from '../../services/api';
 import type { LabReport } from '../../types/backend';
+import { useTranslation } from 'react-i18next';
 export function LabDashboard() {
+  const { t } = useTranslation();
   const [reports, setReports] = useState<LabReport[]>([]);
 
   useEffect(() => {
@@ -24,22 +26,22 @@ export function LabDashboard() {
   }, [reports]);
 
   const stats = [{
-    label: 'Reports Uploaded Today',
+    label: t('labDashboard.uploadedToday'),
     value: String(reportsToday),
     icon: Upload,
     color: 'bg-blue-100 text-blue-800'
   }, {
-    label: 'Pending Review',
+    label: t('labDashboard.pendingReview'),
     value: String(reports.filter((item) => item.status === 'Pending').length),
     icon: Clock,
     color: 'bg-yellow-100 text-yellow-800'
   }, {
-    label: 'Completed Reports',
+    label: t('labDashboard.completedReports'),
     value: String(reports.filter((item) => item.status === 'Completed' || item.status === 'Reviewed').length),
     icon: CheckCircle,
     color: 'bg-green-100 text-green-800'
   }, {
-    label: 'Total Reports',
+    label: t('labDashboard.totalReports'),
     value: String(reports.length),
     icon: FileText,
     color: 'bg-purple-100 text-purple-800'
@@ -54,10 +56,10 @@ export function LabDashboard() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Laboratory Dashboard
+              {t('labDashboard.title')}
             </h1>
             <p className="text-xl text-gray-600">
-              Manage diagnostic reports and test results.
+              {t('labDashboard.subtitle')}
             </p>
           </div>
 
@@ -82,10 +84,10 @@ export function LabDashboard() {
               <section className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
                 <div className="p-6 border-b-2 border-gray-100 flex justify-between items-center">
                   <h2 className="text-2xl font-bold text-gray-900">
-                    Recent Uploads
+                    {t('labDashboard.recentUploads')}
                   </h2>
                   <Link to="/lab/reports" className="text-purple-700 font-bold hover:underline">
-                    View All
+                    {t('labDashboard.viewAll')}
                   </Link>
                 </div>
                 <div className="divide-y divide-gray-100">
@@ -99,7 +101,7 @@ export function LabDashboard() {
                             {upload.test_type}
                           </p>
                           <p className="text-gray-600">
-                            {upload.patient?.full_name ?? 'Patient'} • {new Date(upload.created_at).toLocaleString()}
+                            {upload.patient?.full_name ?? t('labDashboard.patientFallback')} • {new Date(upload.created_at).toLocaleString()}
                           </p>
                         </div>
                       </div>
@@ -114,22 +116,22 @@ export function LabDashboard() {
             {/* Quick Actions */}
             <div className="space-y-6">
               <section className="bg-purple-800 text-white rounded-xl p-8 shadow-lg">
-                <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
+                <h2 className="text-2xl font-bold mb-6">{t('labDashboard.quickActions')}</h2>
                 <div className="space-y-4">
                   <Link to="/lab/upload" className="block w-full bg-white/10 hover:bg-white/20 border-2 border-white/20 rounded-lg p-4 text-left transition-colors">
                     <span className="font-bold block text-lg">
-                      Upload New Report
+                      {t('labDashboard.uploadNew')}
                     </span>
                     <span className="text-purple-100 text-sm">
-                      Add lab test results
+                      {t('labDashboard.uploadNewHelp')}
                     </span>
                   </Link>
                   <Link to="/lab/reports" className="block w-full bg-white/10 hover:bg-white/20 border-2 border-white/20 rounded-lg p-4 text-left transition-colors">
                     <span className="font-bold block text-lg">
-                      View All Reports
+                      {t('labDashboard.viewReports')}
                     </span>
                     <span className="text-purple-100 text-sm">
-                      Browse upload history
+                      {t('labDashboard.viewReportsHelp')}
                     </span>
                   </Link>
                 </div>
@@ -137,11 +139,11 @@ export function LabDashboard() {
 
               <section className="bg-white rounded-xl border-2 border-gray-200 p-6 shadow-sm">
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
-                  System Status
+                  {t('labDashboard.systemStatus')}
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-700">Storage Used</span>
+                    <span className="text-gray-700">{t('labDashboard.storageUsed')}</span>
                     <span className="font-bold text-gray-900">42%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">

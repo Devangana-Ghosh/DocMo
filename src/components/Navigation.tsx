@@ -1,6 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './ui/LanguageSwitcher';
 
 export function Navigation() {
+  const { t } = useTranslation();
   const location = useLocation();
   
   // Determine if user is logged in as patient based on current route
@@ -13,15 +16,15 @@ export function Navigation() {
   
   // Different nav links for logged-in patients vs public
   const navLinks = isPatientLoggedIn ? [
-    { name: 'Find Doctors', href: '/find-doctor' },
-    { name: 'Appointments', href: '/appointments' },
-    { name: 'Prescriptions', href: '/prescriptions' },
-    { name: 'Medical Documents', href: '/documents' },
-    { name: 'Locations', href: '/locations' }
+    { name: t('nav.findDoctors'), href: '/find-doctor' },
+    { name: t('nav.appointments'), href: '/appointments' },
+    { name: t('nav.prescriptions'), href: '/prescriptions' },
+    { name: t('nav.medicalDocuments'), href: '/documents' },
+    { name: t('nav.locations'), href: '/locations' }
   ] : [
-    { name: 'About Us', href: '/about' },
-    { name: 'Services', href: '/services' },
-    { name: 'Contact', href: '/contact' }
+    { name: t('nav.aboutUs'), href: '/about' },
+    { name: t('nav.services'), href: '/services' },
+    { name: t('nav.contact'), href: '/contact' }
   ];
   
   const isActive = (path: string) => location.pathname === path;
@@ -69,22 +72,24 @@ export function Navigation() {
             
             {/* Auth Buttons */}
             <div className="flex items-center space-x-4">
+              <LanguageSwitcher />
               <Link 
                 to="/login" 
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
-                Sign In
+                {t('nav.signIn')}
               </Link>
             </div>
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            <LanguageSwitcher />
             <Link 
               to="/login" 
               className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             >
-              Sign In
+              {t('nav.signIn')}
             </Link>
           </div>
         </div>

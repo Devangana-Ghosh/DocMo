@@ -1,4 +1,5 @@
 import React from 'react';
+import i18n from '../../i18n';
 interface SelectOption {
   value: string;
   label: string;
@@ -24,9 +25,7 @@ export function Select({
   return <div className="w-full mb-6">
       <label htmlFor={selectId} className="block text-lg font-bold text-gray-900 mb-2">
         {label}
-        {props.required && <span className="text-red-700 ml-1" aria-hidden="true">
-            *
-          </span>}
+        {props.required && <span className="text-red-700 ml-1" aria-hidden="true">*</span>}
       </label>
       <div className="relative">
         <select id={selectId} className={`
@@ -36,7 +35,7 @@ export function Select({
             ${error ? 'border-red-600' : 'border-gray-300'}
             ${className}
           `} aria-invalid={!!error} aria-describedby={error ? errorId : helperText ? helperId : undefined} {...props}>
-          <option value="">Select an option</option>
+          <option value="">{i18n.t('ui.selectOption', { defaultValue: 'Select an option' })}</option>
           {options.map(option => <option key={option.value} value={option.value}>
               {option.label}
             </option>)}
@@ -48,7 +47,7 @@ export function Select({
         </div>
       </div>
       {error && <p id={errorId} className="mt-2 text-base font-medium text-red-700">
-          <span className="sr-only">Error:</span>
+          <span className="sr-only">{i18n.t('ui.error', { defaultValue: 'Error:' })}</span>
           {error}
         </p>}
       {!error && helperText && <p id={helperId} className="mt-2 text-base text-gray-600">

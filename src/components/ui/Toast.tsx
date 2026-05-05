@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CheckCircle2, CircleAlert, Info, X } from 'lucide-react';
+import i18n from '../../i18n';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -67,7 +68,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             info: 'border-blue-200 bg-blue-50 text-blue-800',
             warning: 'border-yellow-200 bg-yellow-50 text-yellow-800',
           };
-
           return (
             <div key={toast.id} className={`rounded-xl border-2 p-4 shadow-lg ${styles[toast.type]}`} role="status" aria-live="polite">
               <div className="flex items-start gap-3">
@@ -82,7 +82,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   type="button"
                   onClick={() => removeToast(toast.id)}
                   className="rounded-lg p-1 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-current"
-                  aria-label="Dismiss notification"
+                  aria-label={i18n.t('ui.dismissNotification', { defaultValue: 'Dismiss notification' })}
                 >
                   <X className="h-4 w-4" />
                 </button>

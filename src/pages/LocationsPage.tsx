@@ -6,6 +6,7 @@ import { SkipLink } from '../components/SkipLink';
 import { Button } from '../components/ui/Button';
 import { MapPin, Clock, Phone, Mail, Navigation as NavigationIcon } from 'lucide-react';
 import { searchLocationsWithNominatim } from '../services/integrations';
+import { useTranslation } from 'react-i18next';
 interface Location {
   id: string;
   name: string;
@@ -89,6 +90,7 @@ const LOCATIONS: Location[] = [{
   mapUrl: 'https://maps.google.com/?q=321+Medical+Plaza+Drive+Springfield+IL'
 }];
 export function LocationsPage() {
+  const { t } = useTranslation();
   const [mapLinks, setMapLinks] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -116,11 +118,10 @@ export function LocationsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-              Our Locations
+              {t('locations.title')}
             </h1>
             <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-              HealthAccess operates multiple facilities across the Springfield
-              area. Find the location nearest you and schedule your visit today.
+              {t('locations.subtitle')}
             </p>
           </div>
 
@@ -139,7 +140,7 @@ export function LocationsPage() {
                         <MapPin className="w-6 h-6 text-blue-800 flex-shrink-0 mt-1" aria-hidden="true" />
                         <div>
                           <h3 className="text-lg font-bold text-gray-900 mb-1">
-                            Address
+                            {t('locations.address')}
                           </h3>
                           <address className="text-lg text-gray-700 not-italic">
                             {location.address}
@@ -154,7 +155,7 @@ export function LocationsPage() {
                         <Clock className="w-6 h-6 text-blue-800 flex-shrink-0 mt-1" aria-hidden="true" />
                         <div>
                           <h3 className="text-lg font-bold text-gray-900 mb-2">
-                            Hours
+                            {t('locations.hours')}
                           </h3>
                           <ul className="text-lg text-gray-700 space-y-1">
                             <li>{location.hours.weekdays}</li>
@@ -169,7 +170,7 @@ export function LocationsPage() {
                         <Phone className="w-6 h-6 text-blue-800 flex-shrink-0 mt-1" aria-hidden="true" />
                         <div>
                           <h3 className="text-lg font-bold text-gray-900 mb-2">
-                            Contact
+                            {t('locations.contact')}
                           </h3>
                           <ul className="text-lg text-gray-700 space-y-1">
                             <li>
@@ -192,7 +193,7 @@ export function LocationsPage() {
                   <div className="lg:col-span-1">
                     <div className="bg-blue-50 rounded-lg p-6 border-2 border-blue-100 mb-6">
                       <h3 className="text-xl font-bold text-gray-900 mb-4">
-                        Services Available
+                        {t('locations.servicesAvailable')}
                       </h3>
                       <ul className="space-y-2">
                         {location.services.map(service => <li key={service} className="flex items-center text-lg text-gray-700">
@@ -205,11 +206,11 @@ export function LocationsPage() {
                     <div className="space-y-4">
                       <a href={mapLinks[location.id] ?? location.mapUrl} target="_blank" rel="noopener noreferrer">
                         <Button className="w-full" leftIcon={<NavigationIcon className="w-5 h-5" />}>
-                          OpenStreetMap Directions
+                          {t('locations.openDirections')}
                         </Button>
                       </a>
                       <Button variant="secondary" className="w-full">
-                        Schedule Visit
+                        {t('locations.scheduleVisit')}
                       </Button>
                     </div>
                   </div>
@@ -220,15 +221,13 @@ export function LocationsPage() {
           {/* Emergency Notice */}
           <section className="mt-12 bg-red-50 border-2 border-red-200 rounded-xl p-8" role="alert" aria-labelledby="emergency-heading">
             <h2 id="emergency-heading" className="text-2xl font-bold text-red-900 mb-4">
-              Medical Emergency?
+              {t('locations.emergencyTitle')}
             </h2>
             <p className="text-lg text-red-800 mb-6">
-              If you are experiencing a medical emergency, call{' '}
-              <strong>911</strong> immediately or visit your nearest emergency
-              room. Our Downtown Medical Center has 24/7 emergency services.
+              {t('locations.emergencyText')}
             </p>
             <a href="tel:911" className="inline-flex items-center justify-center px-8 py-4 text-xl font-bold rounded-lg text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-yellow-400 min-h-[56px] transition-transform active:scale-95">
-              Call 911
+              {t('locations.emergencyCall')}
             </a>
           </section>
         </div>

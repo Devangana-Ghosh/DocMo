@@ -5,6 +5,7 @@ import { askRoleAssistant } from '../../services/integrations';
 import { useNavigate } from 'react-router-dom';
 import { fetchAppointmentsByDoctor, fetchAppointmentsByPatient, fetchLabReports, fetchPrescriptionsByDoctor, fetchPrescriptionsByPatient, fetchProfilesByRole } from '../../services/api';
 import type { Appointment, LabReport, Prescription } from '../../types/backend';
+import { useTranslation } from 'react-i18next';
 
 type ChatRole = 'user' | 'assistant';
 
@@ -33,25 +34,31 @@ function isPuterEnabled() {
   return String(import.meta.env.VITE_USE_PUTER_LLM ?? 'false').toLowerCase() === 'true';
 }
 
-function shouldUseMedicalAssistant(message: string) {
-  const text = message.toLowerCase();
-  const medicalKeywords = [
-    'side effect',
-    'interaction',
-    'recall',
-    'risk',
-    'dose',
-    'dosage',
-    'rxcui',
-    'rxnorm',
-    'medicine',
-    'medication',
-    'drug',
-    'contraindication',
-    'adverse',
-  ];
+function isExplicitNavigationRequest(message: string) {
+  const text = normalizeText(message);
+  const raw = message.toLowerCase();
+  if (!text && !raw.trim()) return false;
 
-  return medicalKeywords.some((keyword) => text.includes(keyword));
+  const hindiTerms = ['खोलो', 'खोलें', 'जाओ', 'जाएं', 'बुक', 'ढूंढो', 'खोजो', 'दिखाओ', 'रिपोर्ट', 'अपॉइंटमेंट'];
+  const tamilTerms = ['திற', 'செல்', 'புக்', 'தேடு', 'காட்டு', 'அறிக்கை', 'சந்திப்பு'];
+
+  if (containsAny(text, ['open', 'go to', 'navigate', 'take me', 'show me', 'show'])) {
+    return true;
+  }
+
+  if (hindiTerms.some((term) => raw.includes(term)) || tamilTerms.some((term) => raw.includes(term))) {
+    return true;
+  }
+
+  if (containsAny(text, ['book appointment', 'book a consultation', 'book doctor', 'book with', 'schedule appointment'])) {
+    return true;
+  }
+
+  if (containsAny(text, ['find doctor', 'search doctor', 'find specialist'])) {
+    return true;
+  }
+
+  return false;
 }
 
 function roleRewriteInstruction(role: AppRole) {
@@ -260,24 +267,27 @@ function detectSpecialtyTerm(text: string) {
   return hit ?? null;
 }
 
-function buildIntentAction(message: string, role: AppRole) {
+function buildIntentAction(message: string, role: AppRole, t: (key: string, options?: Record<string, unknown>) => string) {
   const text = message.toLowerCase();
+  const hasFindIntent = text.includes('search doctor') || text.includes('find doctor') || text.includes('find specialist') || text.includes('खोज') || text.includes('ढूंढ') || text.includes('தேடு');
+  const hasOpenIntent = text.includes('open') || text.includes('go to') || text.includes('खोल') || text.includes('जाओ') || text.includes('திற') || text.includes('செல்');
+  const hasBookIntent = text.includes('book appointment') || text.includes('book a consultation') || text.includes('बुक') || text.includes('புக்');
   const params = new URLSearchParams();
   const specialty = detectSpecialtyTerm(text);
 
-  if (specialty && (text.includes('find') || text.includes('search') || text.includes('doctor') || text.includes('specialist'))) {
+  if (specialty && (text.includes('find') || text.includes('search') || text.includes('doctor') || text.includes('specialist') || hasFindIntent)) {
     params.set('specialty', specialty.value);
     params.set('q', specialty.label);
-    return { label: `Open ${specialty.label} search`, to: `/find-doctor?${params.toString()}` };
+    return { label: t('assistant.actions.openSpecialtySearch', { specialty: specialty.label }), to: `/find-doctor?${params.toString()}` };
   }
 
-  if (text.includes('search doctor') || text.includes('find doctor') || text.includes('find specialist')) {
+  if (hasFindIntent) {
     const match = message.match(/for\s+([a-zA-Z\s]+)/i);
     if (match?.[1]) params.set('q', match[1].trim());
-    return { label: 'Open doctor search', to: `/find-doctor${params.toString() ? `?${params.toString()}` : ''}` };
+    return { label: t('assistant.actions.openDoctorSearch'), to: `/find-doctor${params.toString() ? `?${params.toString()}` : ''}` };
   }
 
-  if (text.includes('book appointment') || text.includes('book a consultation')) {
+  if (hasBookIntent) {
     const specialtyMap: Array<{ key: string; value: string }> = [
       { key: 'cardio', value: 'cardiology' },
       { key: 'derma', value: 'dermatology' },
@@ -289,44 +299,48 @@ function buildIntentAction(message: string, role: AppRole) {
     const specialtyHit = specialtyMap.find((item) => text.includes(item.key));
     if (specialtyHit) params.set('specialty', specialtyHit.value);
 
-    return { label: 'Start booking flow', to: `/find-doctor${params.toString() ? `?${params.toString()}` : ''}` };
+    return { label: t('assistant.actions.startBookingFlow'), to: `/find-doctor${params.toString() ? `?${params.toString()}` : ''}` };
   }
 
-  if (text.includes('my appointments') || text.includes('open appointments')) {
-    if (role === 'doctor') return { label: 'Go to doctor appointments', to: '/doctor/appointments' };
-    if (role === 'lab') return { label: 'Go to lab dashboard', to: '/lab/dashboard' };
-    return { label: 'Go to my appointments', to: '/appointments' };
+  if (text.includes('my appointments') || text.includes('open appointments') || (hasOpenIntent && text.includes('appointment')) || text.includes('अपॉइंटमेंट') || text.includes('சந்திப்பு')) {
+    if (role === 'doctor') return { label: t('assistant.actions.doctorAppointments'), to: '/doctor/appointments' };
+    if (role === 'lab') return { label: t('assistant.actions.labDashboard'), to: '/lab/dashboard' };
+    return { label: t('assistant.actions.myAppointments'), to: '/appointments' };
   }
 
-  if (text.includes('prescription')) {
-    if (role === 'doctor') return { label: 'Go to doctor prescriptions', to: '/doctor/prescriptions' };
-    return { label: 'Go to my prescriptions', to: '/prescriptions' };
+  if (text.includes('prescription') || text.includes('प्रिस्क्रिप्शन') || text.includes('மருந்துச்சீட்டு')) {
+    if (role === 'doctor') return { label: t('assistant.actions.doctorPrescriptions'), to: '/doctor/prescriptions' };
+    return { label: t('assistant.actions.myPrescriptions'), to: '/prescriptions' };
   }
 
-  if (text.includes('document') || text.includes('report')) {
-    if (role === 'lab') return { label: 'Go to lab reports', to: '/lab/reports' };
-    return { label: 'Go to my documents', to: '/documents' };
+  if (text.includes('document') || text.includes('report') || text.includes('दस्तावेज') || text.includes('रिपोर्ट') || text.includes('ஆவணம்') || text.includes('அறிக்கை')) {
+    if (role === 'lab') return { label: t('assistant.actions.labReports'), to: '/lab/reports' };
+    return { label: t('assistant.actions.myDocuments'), to: '/documents' };
   }
 
   if (text.includes('doctor patients') || text.includes('patient list')) {
-    return role === 'doctor' ? { label: 'Go to patient list', to: '/doctor/patients' } : null;
+    return role === 'doctor' ? { label: t('assistant.actions.patientList'), to: '/doctor/patients' } : null;
   }
 
   if (text.includes('availability') && role === 'doctor') {
-    return { label: 'Go to availability', to: '/doctor/availability' };
+    return { label: t('assistant.actions.availability'), to: '/doctor/availability' };
   }
 
   return null;
 }
 
-async function resolveIntentAction(message: string, role: AppRole) {
+async function resolveIntentAction(message: string, role: AppRole, t: (key: string, options?: Record<string, unknown>) => string) {
+  if (!isExplicitNavigationRequest(message)) {
+    return null;
+  }
+
   const text = message.toLowerCase();
   if (role === 'patient' && (text.includes('book dr') || text.includes('book doctor') || text.includes('book appointment with') || text.includes('schedule with dr'))) {
     const directDoctorAction = await resolveDoctorBookingAction(message);
     if (directDoctorAction) return directDoctorAction;
   }
 
-  return buildIntentAction(message, role);
+  return buildIntentAction(message, role, t);
 }
 
 function isPatientOverviewIntent(message: string) {
@@ -476,76 +490,76 @@ async function resolveLabPatientLookupAnswer(labUserId: string, message: string)
   return `Latest report for ${patientName}: ${latest.test_type}, status ${latest.status}, dated ${latest.test_date}.`;
 }
 
-function getRolePrompt(role: 'patient' | 'doctor' | 'lab' | 'guest') {
-  if (role === 'doctor') {
-    return 'Doctor Copilot is ready. Ask about medication risk checks, recall signals, and RxNorm normalization.';
-  }
-
-  if (role === 'lab') {
-    return 'Lab Copilot is ready. Ask about medication safety context, interpretation cautions, and workflow help.';
-  }
-
-  if (role === 'patient') {
-    return 'Patient Assistant is ready. Ask about your prescription details and how to use DocMo features.';
-  }
-
-  return 'Welcome to DocMo Assistant. Ask about app features, appointments, and prescriptions.';
+function getRolePrompt(role: 'patient' | 'doctor' | 'lab' | 'guest', t: (key: string, options?: Record<string, unknown>) => string) {
+  if (role === 'doctor') return t('assistant.prompts.doctor');
+  if (role === 'lab') return t('assistant.prompts.lab');
+  if (role === 'patient') return t('assistant.prompts.patient');
+  return t('assistant.prompts.guest');
 }
 
-function roleLabel(role: 'patient' | 'doctor' | 'lab' | 'guest') {
-  if (role === 'doctor') return 'Doctor Copilot';
-  if (role === 'lab') return 'Lab Copilot';
-  if (role === 'patient') return 'Patient Assistant';
-  return 'DocMo Assistant';
+function roleLabel(role: 'patient' | 'doctor' | 'lab' | 'guest', t: (key: string, options?: Record<string, unknown>) => string) {
+  if (role === 'doctor') return t('assistant.roles.doctor');
+  if (role === 'lab') return t('assistant.roles.lab');
+  if (role === 'patient') return t('assistant.roles.patient');
+  return t('assistant.roles.guest');
 }
 
-function getSuggestedQuestions(role: 'patient' | 'doctor' | 'lab' | 'guest') {
-  if (role === 'doctor') {
-    return [
-      'Open doctor appointments',
-      'Open patient list',
-      'When do I have an appointment with John Demo?',
-      'What are risks of amoxicillin?',
-      'Show recall signals for ibuprofen',
-    ];
-  }
-
-  if (role === 'lab') {
-    return [
-      'Open lab reports',
-      'Open lab dashboard',
-      'How many pending reports do I have?',
-      'Latest report for John Doe',
-      'Is the report reviewed for John Doe?',
-    ];
-  }
-
-  if (role === 'patient') {
-    return [
-      'Show my prescriptions',
-      'Open my appointments',
-      'Find doctor for cardiology',
-      'Book appointment with Dr Sarah Jenkins',
-    ];
-  }
-
-  return [
-    'Find doctor for dermatology',
-    'Open login page',
-    'How do I book an appointment?',
-    'What is amoxicillin used for?',
-  ];
+function getSuggestedQuestions(role: 'patient' | 'doctor' | 'lab' | 'guest', t: (key: string, options?: Record<string, unknown>) => unknown) {
+  if (role === 'doctor') return t('assistant.suggestions.doctor', { returnObjects: true }) as string[];
+  if (role === 'lab') return t('assistant.suggestions.lab', { returnObjects: true }) as string[];
+  if (role === 'patient') return t('assistant.suggestions.patient', { returnObjects: true }) as string[];
+  return t('assistant.suggestions.guest', { returnObjects: true }) as string[];
 }
 
-function buildNavigationConfirmation(actionLabel: string) {
+function buildNavigationConfirmation(actionLabel: string, t: (key: string, options?: Record<string, unknown>) => string) {
   if (actionLabel.toLowerCase().includes('book')) {
-    return 'Opening booking now. Pick date/time and confirm your appointment.';
+    return t('assistant.openingBooking');
   }
 
-  return `Opening now: ${actionLabel}`;
+  return t('assistant.opening', { label: actionLabel });
+}
+
+async function buildAppContextForRole(role: AppRole, profileId?: string) {
+  if (!profileId || role === 'guest') return '';
+
+  if (role === 'patient') {
+    const [appointments, prescriptions] = await Promise.all([
+      fetchAppointmentsByPatient(profileId).catch(() => [] as Appointment[]),
+      fetchPrescriptionsByPatient(profileId).catch(() => [] as Prescription[]),
+    ]);
+
+    const pendingOrConfirmed = appointments.filter((item) => item.status === 'Pending' || item.status === 'Confirmed').length;
+    const activeRx = prescriptions.filter((item) => item.status === 'Active' || item.status === 'Refill Needed').length;
+
+    return `Patient context: ${pendingOrConfirmed} upcoming appointments, ${activeRx} active/refill-needed prescriptions.`;
+  }
+
+  if (role === 'doctor') {
+    const [appointments, prescriptions] = await Promise.all([
+      fetchAppointmentsByDoctor(profileId).catch(() => [] as Appointment[]),
+      fetchPrescriptionsByDoctor(profileId).catch(() => [] as Prescription[]),
+    ]);
+
+    const pending = appointments.filter((item) => item.status === 'Pending').length;
+    const refillRequests = prescriptions.filter((item) => item.status === 'Refill Needed' && item.refills_remaining > 0).length;
+
+    return `Doctor context: ${appointments.length} total appointments, ${pending} pending requests, ${refillRequests} refill requests.`;
+  }
+
+  if (role === 'lab') {
+    const reports = await fetchLabReports().catch(() => [] as LabReport[]);
+    const mine = reports.filter((item) => item.uploaded_by === profileId || item.uploaded_by_profile?.id === profileId);
+    const queue = mine.length > 0 ? mine : reports;
+    const pending = queue.filter((item) => item.status === 'Pending').length;
+
+    return `Lab context: ${queue.length} reports in queue, ${pending} pending.`;
+  }
+
+  return '';
 }
 
 export function AssistantChatbot() {
+  const { t, i18n } = useTranslation();
   const { profile } = useAuth();
   const navigate = useNavigate();
   const role = (profile?.role ?? 'guest') as 'patient' | 'doctor' | 'lab' | 'guest';
@@ -558,12 +572,28 @@ export function AssistantChatbot() {
     {
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: getRolePrompt(role),
+      content: getRolePrompt(role, (key, options) => String(t(key, options))),
     },
   ]);
 
-  const title = useMemo(() => roleLabel(role), [role]);
-  const suggestedQuestions = useMemo(() => getSuggestedQuestions(role), [role]);
+  useEffect(() => {
+    setMessages((prev) => {
+      if (!prev.length || prev[0].role !== 'assistant') return prev;
+      return [
+        {
+          ...prev[0],
+          content: getRolePrompt(role, (key, options) => String(t(key, options))),
+        },
+        ...prev.slice(1),
+      ];
+    });
+  }, [role, t]);
+
+  const title = useMemo(() => roleLabel(role, (key, options) => String(t(key, options))), [role, t]);
+  const suggestedQuestions = useMemo(
+    () => getSuggestedQuestions(role, (key, options) => t(key, options)) as string[],
+    [role, t],
+  );
 
   useEffect(() => {
     if (!isPuterEnabled()) {
@@ -592,7 +622,7 @@ export function AssistantChatbot() {
   async function sendMessage(rawText: string) {
     const text = rawText.trim();
     if (!text || isLoading) return;
-    const action = await resolveIntentAction(text, role);
+    const action = await resolveIntentAction(text, role, (key, options) => String(t(key, options)));
 
     const nextUserMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -618,7 +648,7 @@ export function AssistantChatbot() {
             id: crypto.randomUUID(),
             role: 'assistant',
             content: scheduleReply,
-            sources: ['App Data'],
+            sources: [t('assistant.sourcesAppData')],
           },
         ]);
         return;
@@ -632,7 +662,7 @@ export function AssistantChatbot() {
             id: crypto.randomUUID(),
             role: 'assistant',
             content: overviewReply,
-            sources: ['App Data'],
+            sources: [t('assistant.sourcesAppData')],
           },
         ]);
         return;
@@ -646,7 +676,7 @@ export function AssistantChatbot() {
             id: crypto.randomUUID(),
             role: 'assistant',
             content: overviewReply,
-            sources: ['App Data'],
+            sources: [t('assistant.sourcesAppData')],
           },
         ]);
         return;
@@ -660,7 +690,7 @@ export function AssistantChatbot() {
             id: crypto.randomUUID(),
             role: 'assistant',
             content: scheduleReply,
-            sources: ['App Data'],
+            sources: [t('assistant.sourcesAppData')],
           },
         ]);
         return;
@@ -674,7 +704,7 @@ export function AssistantChatbot() {
             id: crypto.randomUUID(),
             role: 'assistant',
             content: overviewReply,
-            sources: ['App Data'],
+            sources: [t('assistant.sourcesAppData')],
           },
         ]);
         return;
@@ -688,7 +718,7 @@ export function AssistantChatbot() {
             id: crypto.randomUUID(),
             role: 'assistant',
             content: patientLookupReply,
-            sources: ['App Data'],
+            sources: [t('assistant.sourcesAppData')],
           },
         ]);
         return;
@@ -702,8 +732,8 @@ export function AssistantChatbot() {
           {
             id: crypto.randomUUID(),
             role: 'assistant',
-            content: buildNavigationConfirmation(action.label),
-            sources: ['App'],
+            content: buildNavigationConfirmation(action.label, (key, options) => String(t(key, options))),
+            sources: [t('assistant.sourcesApp')],
           },
         ]);
 
@@ -712,62 +742,40 @@ export function AssistantChatbot() {
 
       const shouldUsePuter = isPuterEnabled() && puterReady;
       let result: { reply: string; sources?: string[] };
+      const appContext = await buildAppContextForRole(role, profile?.id);
+      const backendResult = await askRoleAssistant({
+        role,
+        message: text,
+        conversation: conversationForApi,
+        locale: i18n.language,
+        appContext,
+      });
 
-      if (shouldUsePuter) {
-        if (shouldUseMedicalAssistant(text)) {
-          const backendResult = await askRoleAssistant({
-            role,
-            message: text,
-            conversation: conversationForApi,
-          });
+      if (shouldUsePuter && window.puter?.ai?.chat) {
+        const rewritePrompt = [
+          roleRewriteInstruction(role),
+          'Rewrite for clarity in the user language. Keep it accurate to the provided context; do not invent facts.',
+          'Output constraints: plain text only, no markdown, no headings, no bold markers, max 5 short bullet points.',
+          `Locale: ${i18n.language}`,
+          `User question: ${text}`,
+          `Recent conversation:\n${conversationContext || 'None'}`,
+          `App context: ${appContext || 'None'}`,
+          `Context answer: ${backendResult.reply}`,
+          `Sources: ${(backendResult.sources ?? []).join(', ') || 'None'}`,
+        ].join('\n\n');
 
-          const rewritePrompt = [
-            roleRewriteInstruction(role),
-            'Use the clinical facts below, but rewrite naturally and helpfully. Do not invent facts beyond the provided context.',
-            'If there is uncertainty, say so briefly.',
-            'Output constraints: plain text only, no markdown, no headings, no bold markers, max 5 short bullet points.',
-            `User question: ${text}`,
-            `Recent conversation:\n${conversationContext || 'None'}`,
-            `Context answer: ${backendResult.reply}`,
-            `Sources: ${(backendResult.sources ?? []).join(', ') || 'None'}`,
-          ].join('\n\n');
-
-          const puterResponse = await window.puter!.ai.chat(rewritePrompt, {
-            model: import.meta.env.VITE_PUTER_MODEL || 'gpt-5.4',
-            temperature: 0.2,
-            max_tokens: 500,
-          });
-
-          result = {
-            reply: toPlainText(puterResponse),
-            sources: [...new Set([...(backendResult.sources ?? []), 'Puter LLM'])],
-          };
-        } else {
-          const generalPrompt = [
-            roleRewriteInstruction(role),
-            'Answer naturally and clearly. If user asks for navigation, suggest exact next action in app terms.',
-            'Output constraints: plain text only, no markdown, no headings, no bold markers, max 4 short bullets/lines.',
-            `Recent conversation:\n${conversationContext || 'None'}`,
-            `User question: ${text}`,
-          ].join('\n\n');
-
-          const puterResponse = await window.puter!.ai.chat(generalPrompt, {
-            model: import.meta.env.VITE_PUTER_MODEL || 'gpt-5.4',
-            temperature: 0.3,
-            max_tokens: 400,
-          });
-
-          result = {
-            reply: toPlainText(puterResponse),
-            sources: ['Puter LLM'],
-          };
-        }
-      } else {
-        result = await askRoleAssistant({
-          role,
-          message: text,
-          conversation: conversationForApi,
+        const puterResponse = await window.puter.ai.chat(rewritePrompt, {
+          model: import.meta.env.VITE_PUTER_MODEL || 'gpt-5.4',
+          temperature: 0.2,
+          max_tokens: 520,
         });
+
+        result = {
+          reply: toPlainText(puterResponse),
+          sources: [...new Set([...(backendResult.sources ?? []), t('assistant.sourcesLLM')])],
+        };
+      } else {
+        result = backendResult;
       }
 
       setMessages((prev) => [
@@ -777,7 +785,7 @@ export function AssistantChatbot() {
           role: 'assistant',
           content: result.reply,
           sources: result.sources,
-          action,
+          action: action ?? undefined,
         },
       ]);
     } catch (error) {
@@ -786,7 +794,7 @@ export function AssistantChatbot() {
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: error instanceof Error ? error.message : 'Unable to reach assistant right now.',
+          content: error instanceof Error ? error.message : t('assistant.errorUnavailable'),
         },
       ]);
     } finally {
@@ -804,7 +812,7 @@ export function AssistantChatbot() {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500"
-        aria-label="Toggle assistant chat"
+        aria-label={isOpen ? t('assistant.toggleClose') : t('assistant.toggleOpen')}
       >
         {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
       </button>
@@ -820,7 +828,7 @@ export function AssistantChatbot() {
               type="button"
               onClick={() => setIsOpen(false)}
               className="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Close assistant"
+              aria-label={t('assistant.toggleClose')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -863,7 +871,7 @@ export function AssistantChatbot() {
 
             {messages.length === 1 && (
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Most asked</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{t('assistant.mostAsked')}</p>
                 <div className="flex flex-wrap gap-2">
                   {suggestedQuestions.map((question) => (
                     <button
@@ -891,7 +899,7 @@ export function AssistantChatbot() {
                     void handleSend();
                   }
                 }}
-                placeholder="Ask about medicines, risks, or app help..."
+                placeholder={t('assistant.inputPlaceholder')}
                 className="h-11 flex-1 rounded-xl border border-gray-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
@@ -899,7 +907,7 @@ export function AssistantChatbot() {
                 onClick={() => void handleSend()}
                 disabled={isLoading || !input.trim()}
                 className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Send message"
+                aria-label={t('assistant.send')}
               >
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>

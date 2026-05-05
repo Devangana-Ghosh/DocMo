@@ -6,6 +6,7 @@ import { FileText, Upload, Download, Eye, Trash2 } from 'lucide-react';
 import type { LabReport, MedicalDocument } from '../types/backend';
 import { useAuth } from '../contexts/AuthContext';
 import { deleteDocument, fetchDocuments, fetchLabReportsByPatient, getDocumentPublicUrl, getLabReportPublicUrl, uploadPatientDocument } from '../services/api';
+import i18n from '../i18n';
 
 export function DocumentsPage() {
   const { profile } = useAuth();
@@ -101,10 +102,10 @@ export function DocumentsPage() {
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-10 gap-6">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                Medical Documents
+                {i18n.t('medicalDocuments', { defaultValue: 'Medical Documents' })}
               </h1>
               <p className="text-xl text-gray-700">
-                Securely access and manage your health records.
+                {i18n.t('medicalDocumentsSubtitle', { defaultValue: 'Securely access and manage your health records.' })}
               </p>
             </div>
 
@@ -117,7 +118,7 @@ export function DocumentsPage() {
                 }
               }}>
                   <Upload className="mr-2 h-5 w-5" aria-hidden="true" />
-                  Upload Document
+                  {i18n.t('documents.upload', { defaultValue: 'Upload Document' })}
                 </span>
               </label>
             </div>
@@ -144,8 +145,8 @@ export function DocumentsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {loading && (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">Loading documents...</td>
+                      <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">{i18n.t('documents.loading', { defaultValue: 'Loading documents...' })}</td>
                     </tr>
                   )}
                   {documents.map(doc => <tr key={doc.id} className="hover:bg-blue-50 transition-colors">
@@ -195,7 +196,7 @@ export function DocumentsPage() {
               </table>
             </div>
             {documents.length === 0 && <div className="p-12 text-center text-gray-500 text-lg">
-                No documents found. Upload a file to get started.
+                {i18n.t('documents.noDocuments', { defaultValue: 'No documents found. Upload a file to get started.' })}
               </div>}
             {error && <div className="mx-6 mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
           </div>

@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import i18n from '../../i18n';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
@@ -24,9 +25,7 @@ export function Input({
       <label htmlFor={inputId} className="block text-lg font-bold text-gray-900 mb-2">
         {label}
         {props.required && (
-          <span className="text-red-700 ml-1" aria-hidden="true">
-            *
-          </span>
+          <span className="text-red-700 ml-1" aria-hidden="true">*</span>
         )}
       </label>
 
@@ -50,7 +49,7 @@ export function Input({
 
       {error && (
         <p id={errorId} className="mt-2 text-base font-medium text-red-700 flex items-center">
-          <span className="sr-only">Error:</span>
+          <span className="sr-only">{i18n.t('ui.error', { defaultValue: 'Error:' })}</span>
           {error}
         </p>
       )}

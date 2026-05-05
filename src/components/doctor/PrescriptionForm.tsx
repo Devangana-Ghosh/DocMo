@@ -3,6 +3,7 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { Send } from 'lucide-react';
+import i18n from '../../i18n';
 import { fetchOpenFdaDrugInteractionText, fetchRxNormSuggestions, type RxNormConcept } from '../../services/integrations';
 import type { Prescription } from '../../types/backend';
 
@@ -176,7 +177,7 @@ function detectMedicationConflicts(currentMedication: string, activePrescription
   return conflicts;
 }
 
-export function PrescriptionForm({ patientOptions, existingPrescriptions = [], onSubmitPrescription, initialValues, submitLabel = 'Issue Prescription' }: PrescriptionFormProps) {
+export function PrescriptionForm({ patientOptions, existingPrescriptions = [], onSubmitPrescription, initialValues, submitLabel = i18n.t('doctorRx.issuePrescription', { defaultValue: 'Issue Prescription' }) }: PrescriptionFormProps) {
   const [values, setValues] = useState<PrescriptionFormValues>({ ...DEFAULT_VALUES, ...initialValues });
   const [submitting, setSubmitting] = useState(false);
   const [rxNormSuggestions, setRxNormSuggestions] = useState<RxNormConcept[]>([]);
@@ -401,12 +402,12 @@ export function PrescriptionForm({ patientOptions, existingPrescriptions = [], o
 
   return <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-sm">
       <h3 className="text-xl font-bold text-gray-900 mb-6">
-        Issue New Prescription
+        {i18n.t('doctorRx.issueNew', { defaultValue: 'Issue New Prescription' })}
       </h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="md:col-span-2">
-          <Select label="Select Patient" options={patientOptions} value={values.patientId} onChange={(event) => setValues((current) => ({ ...current, patientId: event.target.value }))} required />
+          <Select label={i18n.t('doctorRx.selectPatient', { defaultValue: 'Select Patient' })} options={patientOptions} value={values.patientId} onChange={(event) => setValues((current) => ({ ...current, patientId: event.target.value }))} required />
           {values.patientId && (
             <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
               <p className="font-semibold">Patient medication snapshot</p>
@@ -458,7 +459,7 @@ export function PrescriptionForm({ patientOptions, existingPrescriptions = [], o
         </div>
 
         <div>
-          <Input label="Medication Name" placeholder="e.g. Amoxicillin" value={values.medicationName} onChange={(event) => setValues((current) => ({ ...current, medicationName: event.target.value }))} required />
+          <Input label={i18n.t('doctorRx.medicationName', { defaultValue: 'Medication Name' })} placeholder={i18n.t('doctorRx.medicationPlaceholder', { defaultValue: 'e.g. Amoxicillin' })} value={values.medicationName} onChange={(event) => setValues((current) => ({ ...current, medicationName: event.target.value }))} required />
           <div className="-mt-4 mb-3 flex flex-wrap gap-2">
             {rxNormSuggestions.slice(0, 5).map((item) => <button key={item.rxcui} type="button" className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 hover:bg-blue-100" onClick={() => {
               const parsed = parseMedicationFromRxNormLabel(item.name);
@@ -502,56 +503,55 @@ export function PrescriptionForm({ patientOptions, existingPrescriptions = [], o
             </div>
           )}
         </div>
-        <Input label="Dosage" placeholder="e.g. 500mg" value={values.dosage} onChange={(event) => setValues((current) => ({ ...current, dosage: event.target.value }))} required />
+        <Input label={i18n.t('doctorRx.dosage', { defaultValue: 'Dosage' })} placeholder={i18n.t('doctorRx.dosagePlaceholder', { defaultValue: 'e.g. 500mg' })} value={values.dosage} onChange={(event) => setValues((current) => ({ ...current, dosage: event.target.value }))} required />
 
-        <Select label="Frequency" options={[{
+        <Select label={i18n.t('doctorRx.frequency', { defaultValue: 'Frequency' })} options={[{
         value: 'daily',
-        label: 'Once Daily'
+        label: i18n.t('doctorRx.frequencyOptions.daily', { defaultValue: 'Once Daily' })
       }, {
         value: 'bid',
-        label: 'Twice Daily (BID)'
+        label: i18n.t('doctorRx.frequencyOptions.bid', { defaultValue: 'Twice Daily (BID)' })
       }, {
         value: 'tid',
-        label: 'Three Times Daily (TID)'
+        label: i18n.t('doctorRx.frequencyOptions.tid', { defaultValue: 'Three Times Daily (TID)' })
       }, {
         value: 'qid',
-        label: 'Four Times Daily (QID)'
+        label: i18n.t('doctorRx.frequencyOptions.qid', { defaultValue: 'Four Times Daily (QID)' })
       }, {
         value: 'prn',
-        label: 'As Needed (PRN)'
+        label: i18n.t('doctorRx.frequencyOptions.prn', { defaultValue: 'As Needed (PRN)' })
       }]} value={values.frequency} onChange={(event) => setValues((current) => ({ ...current, frequency: event.target.value }))} required />
 
-        <Input label="Duration" placeholder="e.g. 7 days" value={values.duration} onChange={(event) => setValues((current) => ({ ...current, duration: event.target.value }))} required />
+        <Input label={i18n.t('doctorRx.duration', { defaultValue: 'Duration' })} placeholder={i18n.t('doctorRx.durationPlaceholder', { defaultValue: 'e.g. 7 days' })} value={values.duration} onChange={(event) => setValues((current) => ({ ...current, duration: event.target.value }))} required />
 
-        <Input label="Refills Remaining" type="number" min={0} value={values.refillsRemaining} onChange={(event) => setValues((current) => ({ ...current, refillsRemaining: Number(event.target.value) }))} required />
+        <Input label={i18n.t('doctorRx.refillsRemaining', { defaultValue: 'Refills Remaining' })} type="number" min={0} value={values.refillsRemaining} onChange={(event) => setValues((current) => ({ ...current, refillsRemaining: Number(event.target.value) }))} required />
 
-        <Select label="Status" options={[{
+        <Select label={i18n.t('doctorRx.status', { defaultValue: 'Status' })} options={[{
         value: 'Active',
-        label: 'Active'
+        label: i18n.t('doctorRx.statusOptions.active', { defaultValue: 'Active' })
       }, {
         value: 'Completed',
-        label: 'Completed'
+        label: i18n.t('doctorRx.statusOptions.completed', { defaultValue: 'Completed' })
       }, {
         value: 'Refill Needed',
-        label: 'Refill Needed'
+        label: i18n.t('doctorRx.statusOptions.refillNeeded', { defaultValue: 'Refill Needed' })
       }, {
         value: 'Cancelled',
-        label: 'Cancelled'
+        label: i18n.t('doctorRx.statusOptions.cancelled', { defaultValue: 'Cancelled' })
       }]} value={values.status} onChange={(event) => setValues((current) => ({ ...current, status: event.target.value as PrescriptionFormValues['status'] }))} required />
 
         <div className="md:col-span-2">
           <label className="block text-lg font-bold text-gray-900 mb-2">
-            Instructions
+            {i18n.t('doctorRx.instructions', { defaultValue: 'Instructions' })}
           </label>
-          <textarea className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-teal-800 focus:ring-4 focus:ring-yellow-400 min-h-[100px]" placeholder="Special instructions for the patient..." value={values.instructions} onChange={(event) => setValues((current) => ({ ...current, instructions: event.target.value }))}></textarea>
+          <textarea className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-teal-800 focus:ring-4 focus:ring-yellow-400 min-h-[100px]" placeholder={i18n.t('doctorRx.instructionsPlaceholder', { defaultValue: 'Special instructions for the patient...' })} value={values.instructions} onChange={(event) => setValues((current) => ({ ...current, instructions: event.target.value }))}></textarea>
         </div>
 
         <div className="md:col-span-2">
           <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border-2 border-gray-200 cursor-pointer">
             <input type="checkbox" className="w-6 h-6 text-teal-600 rounded focus:ring-teal-500" required />
             <span className="text-gray-900 font-medium">
-              I certify that I am authorized to issue this prescription
-              digitally.
+              {i18n.t('doctorRx.certifyPrescription', { defaultValue: 'I certify that I am authorized to issue this prescription digitally.' })}
             </span>
           </label>
         </div>

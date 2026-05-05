@@ -83,3 +83,11 @@ export interface LabReport {
   patient?: Pick<Profile, 'id' | 'full_name' | 'mrn' | 'dob' | 'gender'>;
   uploaded_by_profile?: Pick<Profile, 'id' | 'full_name' | 'role'>;
 }
+
+export interface DoctorAvailabilitySlot {
+  id: string;
+  doctor_id: string;
+  day_of_week: number;
+  slot_time: string;
+  created_at?: string;
+}

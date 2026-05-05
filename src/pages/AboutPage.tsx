@@ -2,8 +2,10 @@ import { Navigation } from '../components/Navigation';
 import { Footer } from '../components/Footer';
 import { SkipLink } from '../components/SkipLink';
 import { Heart, Users, Award, Shield, Clock, MapPin } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export function AboutPage() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       <SkipLink />
@@ -13,9 +15,9 @@ export function AboutPage() {
         {/* Hero Section */}
         <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20 px-4">
           <div className="max-w-7xl mx-auto text-center">
-            <h1 className="text-5xl font-bold mb-6">About DocMo</h1>
+            <h1 className="text-5xl font-bold mb-6">{t('about.title')}</h1>
             <p className="text-2xl text-blue-100 max-w-3xl mx-auto">
-              Revolutionizing healthcare through technology, compassion, and excellence in patient care.
+              {t('about.subtitle')}
             </p>
           </div>
         </section>
@@ -28,11 +30,9 @@ export function AboutPage() {
                 <div className="bg-blue-100 rounded-full p-4 w-16 h-16 mb-6 flex items-center justify-center">
                   <Heart className="h-8 w-8 text-blue-600" />
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Mission</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">{t('about.missionTitle')}</h2>
                 <p className="text-lg text-gray-700 leading-relaxed">
-                  To provide accessible, high-quality healthcare services through innovative technology solutions 
-                  that connect patients with the best medical professionals and facilities, ensuring everyone 
-                  receives the care they deserve.
+                  {t('about.missionText')}
                 </p>
               </div>
 
@@ -40,11 +40,9 @@ export function AboutPage() {
                 <div className="bg-blue-100 rounded-full p-4 w-16 h-16 mb-6 flex items-center justify-center">
                   <Award className="h-8 w-8 text-blue-600" />
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Vision</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">{t('about.visionTitle')}</h2>
                 <p className="text-lg text-gray-700 leading-relaxed">
-                  To become the most trusted healthcare platform, setting new standards in medical excellence, 
-                  patient satisfaction, and technological innovation while making quality healthcare accessible 
-                  to communities worldwide.
+                  {t('about.visionText')}
                 </p>
               </div>
             </div>
@@ -55,9 +53,9 @@ export function AboutPage() {
         <section className="bg-white py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Core Values</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('about.coreValuesTitle')}</h2>
               <p className="text-xl text-gray-600">
-                The principles that guide everything we do
+                {t('about.coreValuesSubtitle')}
               </p>
             </div>
 
@@ -66,9 +64,9 @@ export function AboutPage() {
                 <div className="bg-blue-100 rounded-full p-6 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
                   <Users className="h-10 w-10 text-blue-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Patient First</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">{t('about.values.patientFirstTitle')}</h3>
                 <p className="text-gray-600">
-                  Every decision we make prioritizes the health, safety, and comfort of our patients.
+                  {t('about.values.patientFirstText')}
                 </p>
               </div>
 
@@ -76,9 +74,9 @@ export function AboutPage() {
                 <div className="bg-blue-100 rounded-full p-6 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
                   <Shield className="h-10 w-10 text-blue-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Trust & Integrity</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">{t('about.values.trustTitle')}</h3>
                 <p className="text-gray-600">
-                  We maintain the highest ethical standards and protect patient privacy and data security.
+                  {t('about.values.trustText')}
                 </p>
               </div>
 
@@ -86,9 +84,9 @@ export function AboutPage() {
                 <div className="bg-blue-100 rounded-full p-6 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
                   <Award className="h-10 w-10 text-blue-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Excellence</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">{t('about.values.excellenceTitle')}</h3>
                 <p className="text-gray-600">
-                  We strive for excellence in medical care, technology, and customer service.
+                  {t('about.values.excellenceText')}
                 </p>
               </div>
             </div>
@@ -99,31 +97,31 @@ export function AboutPage() {
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-blue-50">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">DocMo in Numbers</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('about.numbersTitle')}</h2>
               <p className="text-xl text-gray-600">
-                Our impact on healthcare delivery
+                {t('about.numbersSubtitle')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <div className="bg-white rounded-xl border-2 border-blue-200 p-8 text-center shadow-sm">
                 <div className="text-5xl font-bold text-blue-600 mb-2">500+</div>
-                <div className="text-lg font-medium text-gray-700">Expert Doctors</div>
+                <div className="text-lg font-medium text-gray-700">{t('about.metrics.expertDoctors')}</div>
               </div>
 
               <div className="bg-white rounded-xl border-2 border-blue-200 p-8 text-center shadow-sm">
                 <div className="text-5xl font-bold text-blue-600 mb-2">50K+</div>
-                <div className="text-lg font-medium text-gray-700">Happy Patients</div>
+                <div className="text-lg font-medium text-gray-700">{t('about.metrics.happyPatients')}</div>
               </div>
 
               <div className="bg-white rounded-xl border-2 border-blue-200 p-8 text-center shadow-sm">
                 <div className="text-5xl font-bold text-blue-600 mb-2">100K+</div>
-                <div className="text-lg font-medium text-gray-700">Appointments</div>
+                <div className="text-lg font-medium text-gray-700">{t('about.metrics.appointments')}</div>
               </div>
 
               <div className="bg-white rounded-xl border-2 border-blue-200 p-8 text-center shadow-sm">
                 <div className="text-5xl font-bold text-blue-600 mb-2">25+</div>
-                <div className="text-lg font-medium text-gray-700">Specialties</div>
+                <div className="text-lg font-medium text-gray-700">{t('about.metrics.specialties')}</div>
               </div>
             </div>
           </div>
@@ -133,9 +131,9 @@ export function AboutPage() {
         <section className="py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose DocMo?</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('about.whyTitle')}</h2>
               <p className="text-xl text-gray-600">
-                Experience healthcare the way it should be
+                {t('about.whySubtitle')}
               </p>
             </div>
 
@@ -146,9 +144,9 @@ export function AboutPage() {
                     <Clock className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">24/7 Availability</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{t('about.whyCards.availabilityTitle')}</h3>
                     <p className="text-gray-600">
-                      Access healthcare services anytime, anywhere with our round-the-clock support.
+                      {t('about.whyCards.availabilityText')}
                     </p>
                   </div>
                 </div>
@@ -160,9 +158,9 @@ export function AboutPage() {
                     <Award className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Certified Professionals</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{t('about.whyCards.certifiedTitle')}</h3>
                     <p className="text-gray-600">
-                      All our doctors are board-certified with years of experience in their specialties.
+                      {t('about.whyCards.certifiedText')}
                     </p>
                   </div>
                 </div>
@@ -174,9 +172,9 @@ export function AboutPage() {
                     <Shield className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Secure & Private</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{t('about.whyCards.secureTitle')}</h3>
                     <p className="text-gray-600">
-                      Your medical information is protected with state-of-the-art security measures.
+                      {t('about.whyCards.secureText')}
                     </p>
                   </div>
                 </div>
@@ -188,9 +186,9 @@ export function AboutPage() {
                     <MapPin className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Multiple Locations</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{t('about.whyCards.locationsTitle')}</h3>
                     <p className="text-gray-600">
-                      Find quality healthcare close to you with our network of medical facilities.
+                      {t('about.whyCards.locationsText')}
                     </p>
                   </div>
                 </div>
@@ -202,9 +200,9 @@ export function AboutPage() {
                     <Heart className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Comprehensive Care</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{t('about.whyCards.comprehensiveTitle')}</h3>
                     <p className="text-gray-600">
-                      From diagnosis to treatment and follow-up, we provide complete healthcare solutions.
+                      {t('about.whyCards.comprehensiveText')}
                     </p>
                   </div>
                 </div>
@@ -216,9 +214,9 @@ export function AboutPage() {
                     <Users className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Patient-Centered</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{t('about.whyCards.patientCenteredTitle')}</h3>
                     <p className="text-gray-600">
-                      Your comfort, satisfaction, and wellbeing are at the heart of everything we do.
+                      {t('about.whyCards.patientCenteredText')}
                     </p>
                   </div>
                 </div>
