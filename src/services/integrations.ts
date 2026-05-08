@@ -6,6 +6,8 @@ type MeetingLinkResponse = {
   meetingLink?: string;
 };
 
+export const SHARED_MEET_LINK = 'https://meet.google.com/yun-buuh-hfr';
+
 type AssistantRole = 'patient' | 'doctor' | 'lab' | 'guest';
 
 type AssistantConversationMessage = {
@@ -37,6 +39,19 @@ function getEdgeFunctionHeaders() {
 function toErrorMessage(value: unknown, fallback: string) {
   if (value instanceof Error) return value.message;
   return fallback;
+}
+
+export function ensureGoogleMeetUrl(url?: string | null) {
+  if (!url) return null;
+
+  const normalized = url.trim();
+  if (!normalized) return null;
+
+  if (normalized.toLowerCase().includes('meet.google.com/')) {
+    return normalized;
+  }
+
+  return null;
 }
 
 function getAssistantApiUrl() {
@@ -252,32 +267,8 @@ export async function createVideoConsultationLink(params: {
   time: string;
   doctorEmail?: string;
   patientEmail?: string;
-}) {
-  const fixedMeetLink = import.meta.env.VITE_FIXED_MEET_LINK as string | undefined;
-  if (fixedMeetLink) {
-    return fixedMeetLink;
-  }
-
-  const endpoint = import.meta.env.VITE_VIDEO_LINKS_API_URL as string | undefined;
-  if (endpoint) {
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: getEdgeFunctionHeaders(),
-        body: JSON.stringify({ mode: 'create-event', ...params }),
-      });
-
-      if (response.ok) {
-        const payload = (await response.json()) as MeetingLinkResponse;
-        if (payload.meetingLink) return payload.meetingLink;
-      }
-    } catch {
-      // fallback below
-    }
-  }
-
-  const fallbackMeetUrl = (import.meta.env.VITE_VIDEO_MEETING_BASE_URL as string | undefined) ?? 'https://meet.google.com/new';
-  return fallbackMeetUrl;
+}): Promise<string | null> {
+  return ensureGoogleMeetUrl(SHARED_MEET_LINK);
 }
 
 export async function sendConsultationAlert(payload: {
@@ -358,6 +349,8 @@ export async function askRoleAssistant(params: {
   role: AssistantRole;
   message: string;
   conversation?: AssistantConversationMessage[];
+  locale?: string;
+  appContext?: string;
 }) {
   const endpoint = getAssistantApiUrl();
   if (!endpoint) {

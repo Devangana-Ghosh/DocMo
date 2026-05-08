@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, FileText, X, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
+import i18n from '../../i18n';
 interface UploadPanelProps {
   onFileSelect: (file: File) => void;
   selectedFile: File | null;
@@ -57,11 +58,11 @@ export function UploadPanel({
               document.getElementById('file-upload')?.click();
             }
           }}>
-                Browse Files
+                {i18n.t('labUpload.browseFiles', { defaultValue: 'Browse Files' })}
               </span>
             </label>
             <p className="text-sm text-gray-500 mt-4">
-              Supported formats: PDF, JPG, PNG, DOC (Max 10MB)
+              {i18n.t('labUpload.supportedFormats', { defaultValue: 'Supported formats: PDF, JPG, PNG, DOC (Max 10MB)' })}
             </p>
           </div>
         </div> : <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-6">
@@ -79,13 +80,13 @@ export function UploadPanel({
                 </p>
               </div>
             </div>
-            <button onClick={onClearFile} className="text-red-700 hover:bg-red-50 p-2 rounded-lg focus:outline-none focus:ring-4 focus:ring-yellow-400" aria-label="Remove file">
+            <button onClick={onClearFile} className="text-red-700 hover:bg-red-50 p-2 rounded-lg focus:outline-none focus:ring-4 focus:ring-yellow-400" aria-label={i18n.t('labUpload.removeFile', { defaultValue: 'Remove file' })}>
               <X className="h-6 w-6" />
             </button>
           </div>
           <div className="mt-4 flex items-center gap-2 text-green-700">
             <CheckCircle className="h-5 w-5" />
-            <span className="font-medium">File ready for upload</span>
+            <span className="font-medium">{i18n.t('labUpload.fileReady', { defaultValue: 'File ready for upload' })}</span>
           </div>
         </div>}
     </div>;

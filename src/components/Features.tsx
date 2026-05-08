@@ -1,32 +1,33 @@
 import React from 'react';
 import { ShieldCheck, Clock, UserCheck, Smartphone } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 const features = [{
-  name: 'Verified Specialists',
-  description: 'Every doctor on our platform is board-certified and vetted for quality care.',
+  name: 'features.verifiedTitle',
+  description: 'features.verifiedDesc',
   icon: ShieldCheck
 }, {
-  name: '24/7 Availability',
-  description: 'Book appointments anytime, day or night. Our system never sleeps.',
+  name: 'features.availabilityTitle',
+  description: 'features.availabilityDesc',
   icon: Clock
 }, {
-  name: 'Patient-First Design',
-  description: 'Interfaces designed for clarity. Large text, high contrast, and screen reader ready.',
+  name: 'features.designTitle',
+  description: 'features.designDesc',
   icon: UserCheck
 }, {
-  name: 'Mobile Optimized',
-  description: 'Manage your health on the go with our fully responsive mobile experience.',
+  name: 'features.mobileTitle',
+  description: 'features.mobileDesc',
   icon: Smartphone
 }];
 export function Features() {
+  const { t } = useTranslation();
   return <section className="bg-gray-50 py-16 sm:py-24" aria-labelledby="features-heading">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 id="features-heading" className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            Why Choose HealthAccess?
+            {t('features.heading')}
           </h2>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-            We are committed to providing a healthcare experience that works for
-            everyone, regardless of ability or device.
+            {t('features.subtitle')}
           </p>
         </div>
 
@@ -39,10 +40,10 @@ export function Features() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  {feature.name}
+                  {t(feature.name)}
                 </h3>
                 <p className="text-lg text-gray-700 leading-relaxed">
-                  {feature.description}
+                  {t(feature.description)}
                 </p>
               </div>
             </div>)}

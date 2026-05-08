@@ -8,9 +8,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { Appointment } from '../../types/backend';
 import { Link } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
-import { buildGoogleCalendarEventUrl, sendConsultationAlert } from '../../services/integrations';
+import { SHARED_MEET_LINK, buildGoogleCalendarEventUrl, sendConsultationAlert } from '../../services/integrations';
+import { useTranslation } from 'react-i18next';
 
 export function AppointmentsPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const toast = useToast();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -24,7 +26,7 @@ export function AppointmentsPage() {
         const data = await fetchAppointmentsByDoctor(profile.id);
         setAppointments(data);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load appointments.');
+        setError(loadError instanceof Error ? loadError.message : t('doctorAppointments.loadError'));
       }
     };
 
@@ -35,7 +37,7 @@ export function AppointmentsPage() {
     .filter((item) => item.status === 'Pending')
     .map((item) => ({
       id: item.id,
-      patientName: item.patient?.full_name ?? 'Patient',
+      patientName: item.patient?.full_name ?? t('doctorRx.patientFallback'),
       date: item.appointment_date,
       time: item.appointment_time,
       reason: item.reason,
@@ -50,6 +52,7 @@ export function AppointmentsPage() {
       setAppointments((current) => current.map((item) => (item.id === id ? updated : item)));
 
       const original = appointments.find((item) => item.id === id);
+      const meetingUrl = SHARED_MEET_LINK;
       await sendConsultationAlert({
         doctorName: profile?.full_name ?? 'Doctor',
         patientName: original?.patient?.full_name ?? 'Patient',
@@ -58,12 +61,12 @@ export function AppointmentsPage() {
         appointmentDate: updated.appointment_date,
         appointmentTime: updated.appointment_time,
         appointmentType: updated.appointment_type,
-        meetingLink: updated.meeting_link ?? undefined,
+        meetingLink: meetingUrl ?? undefined,
       }).catch(() => undefined);
 
-      toast.success('Appointment accepted', 'The patient booking has been confirmed.');
+      toast.success(t('doctorAppointments.acceptedTitle'), t('doctorAppointments.acceptedMessage'));
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'Unable to accept appointment.');
+      setError(updateError instanceof Error ? updateError.message : t('doctorAppointments.acceptError'));
     }
   };
 
@@ -73,6 +76,7 @@ export function AppointmentsPage() {
       setAppointments((current) => current.map((item) => (item.id === id ? { ...item, status: 'Rejected' } : item)));
 
       const original = appointments.find((item) => item.id === id);
+      const meetingUrl = SHARED_MEET_LINK;
       await sendConsultationAlert({
         doctorName: profile?.full_name ?? 'Doctor',
         patientName: original?.patient?.full_name ?? 'Patient',
@@ -81,10 +85,10 @@ export function AppointmentsPage() {
         appointmentDate: updated.appointment_date,
         appointmentTime: updated.appointment_time,
         appointmentType: updated.appointment_type,
-        meetingLink: updated.meeting_link ?? undefined,
+        meetingLink: meetingUrl ?? undefined,
       }).catch(() => undefined);
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'Unable to reject appointment.');
+      setError(updateError instanceof Error ? updateError.message : t('doctorAppointments.rejectError'));
     }
   };
   return <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
@@ -95,10 +99,10 @@ export function AppointmentsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Appointments
+              {t('doctorAppointments.title')}
             </h1>
             <p className="text-xl text-gray-600">
-              Manage incoming requests and your schedule.
+              {t('doctorAppointments.subtitle')}
             </p>
           </div>
 
@@ -107,26 +111,26 @@ export function AppointmentsPage() {
             <div className="lg:col-span-1 space-y-6">
               {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
               <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                Pending Requests
+                {t('doctorAppointments.pending')}
                 <span className="bg-yellow-100 text-yellow-800 text-sm px-3 py-1 rounded-full">
                   {requests.length}
                 </span>
               </h2>
 
               {requests.length > 0 ? requests.map(req => <AppointmentCard key={req.id} appointment={req} onAccept={handleAccept} onReject={handleReject} />) : <div className="bg-white p-8 rounded-xl border-2 border-gray-200 text-center text-gray-500">
-                  No pending requests
+                  {t('doctorAppointments.nonePending')}
                 </div>}
             </div>
 
             {/* Calendar/Schedule View */}
             <div className="lg:col-span-2">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Upcoming Schedule
+                {t('doctorAppointments.upcoming')}
               </h2>
               <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
                 <div className="p-6 border-b-2 border-gray-100">
                   <h3 className="text-lg font-bold text-gray-900">
-                    Upcoming Confirmed Appointments
+                    {t('doctorAppointments.upcomingConfirmed')}
                   </h3>
                 </div>
                 <div className="divide-y divide-gray-100">
@@ -139,25 +143,25 @@ export function AppointmentsPage() {
                       </div>
                       <div className="flex-grow">
                         <p className="text-lg font-bold text-gray-900">
-                          {slot.patient?.full_name ?? 'Patient'}
+                          {slot.patient?.full_name ?? t('doctorRx.patientFallback')}
                         </p>
                         <p className="text-gray-600">{slot.reason}</p>
                       </div>
                       <div className="flex flex-col sm:items-end gap-2">
                         {slot.appointment_type === 'Video Call' && (
                           <a
-                            href={slot.meeting_link ?? 'https://meet.google.com/new'}
+                            href={SHARED_MEET_LINK}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700"
                           >
-                            Open Google Meet
+                            {t('doctorAppointments.openMeet')}
                           </a>
                         )}
                         <a
                           href={buildGoogleCalendarEventUrl({
                             title: `Consultation with ${slot.patient?.full_name ?? 'Patient'}`,
-                            description: `${slot.appointment_type} consultation${slot.reason ? `\n\nReason: ${slot.reason}` : ''}${slot.meeting_link ? `\n\nMeeting: ${slot.meeting_link}` : ''}`,
+                            description: `${slot.appointment_type} consultation${slot.reason ? `\n\nReason: ${slot.reason}` : ''}${slot.appointment_type === 'Video Call' ? `\n\nMeeting: ${SHARED_MEET_LINK}` : ''}`,
                             location: slot.location,
                             appointmentDate: slot.appointment_date,
                             appointmentTime: slot.appointment_time,
@@ -166,10 +170,10 @@ export function AppointmentsPage() {
                           rel="noopener noreferrer"
                           className="text-blue-700 font-semibold hover:underline"
                         >
-                          Add to Google Calendar
+                          {t('doctorAppointments.addCalendar')}
                         </a>
                         <Link to="/doctor/patients" className="text-teal-700 font-bold hover:underline">
-                          View Details
+                          {t('doctorAppointments.viewDetails')}
                         </Link>
                       </div>
                     </div>)}

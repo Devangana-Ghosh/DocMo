@@ -42,6 +42,58 @@ FOR INSERT
 TO authenticated
 WITH CHECK (auth.uid() = id and role in ('patient', 'doctor', 'lab'));
 
+CREATE TABLE IF NOT EXISTS public.doctor_availability (
+  id uuid primary key default gen_random_uuid(),
+  doctor_id uuid not null references public.profiles(id) on delete cascade,
+  day_of_week int not null check (day_of_week between 0 and 6),
+  slot_time text not null,
+  created_at timestamptz not null default now(),
+  unique (doctor_id, day_of_week, slot_time)
+);
+
+ALTER TABLE public.doctor_availability ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "doctor_availability_read" ON public.doctor_availability;
+CREATE POLICY "doctor_availability_read"
+ON public.doctor_availability
+FOR SELECT
+TO authenticated
+USING (true);
+
+DROP POLICY IF EXISTS "doctor_availability_doctor_insert" ON public.doctor_availability;
+CREATE POLICY "doctor_availability_doctor_insert"
+ON public.doctor_availability
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  doctor_id = auth.uid()
+  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'doctor')
+);
+
+DROP POLICY IF EXISTS "doctor_availability_doctor_update" ON public.doctor_availability;
+CREATE POLICY "doctor_availability_doctor_update"
+ON public.doctor_availability
+FOR UPDATE
+TO authenticated
+USING (
+  doctor_id = auth.uid()
+  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'doctor')
+)
+WITH CHECK (
+  doctor_id = auth.uid()
+  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'doctor')
+);
+
+DROP POLICY IF EXISTS "doctor_availability_doctor_delete" ON public.doctor_availability;
+CREATE POLICY "doctor_availability_doctor_delete"
+ON public.doctor_availability
+FOR DELETE
+TO authenticated
+USING (
+  doctor_id = auth.uid()
+  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'doctor')
+);
+
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -77,6 +129,11 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
+
+UPDATE public.appointments
+SET meeting_link = 'https://meet.google.com/new'
+WHERE meeting_link IS NOT NULL
+  AND lower(meeting_link) NOT LIKE '%meet.google.com/%';
 
 DROP POLICY IF EXISTS "lab_reports_staff_update" ON public.lab_reports;
 CREATE POLICY "lab_reports_staff_update"

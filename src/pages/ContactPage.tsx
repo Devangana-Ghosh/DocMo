@@ -5,8 +5,10 @@ import { SkipLink } from '../components/SkipLink';
 import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
 import { submitContactMessage } from '../services/api';
 import { useToast } from '../components/ui/Toast';
+import { useTranslation } from 'react-i18next';
 
 export function ContactPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [formData, setFormData] = useState({
     name: '',
@@ -34,13 +36,13 @@ export function ContactPage() {
         message: formData.message,
       });
 
-      setSuccessMessage('Thank you for contacting us! We will get back to you within 24 hours.');
-      toast.success('Message sent', 'Support has received your message.');
+      setSuccessMessage(t('contact.success'));
+      toast.success(t('contact.toastSentTitle'), t('contact.toastSentText'));
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : 'Unable to send message.';
+      const message = submitError instanceof Error ? submitError.message : t('contact.sendError');
       setErrorMessage(message);
-      toast.error('Message failed', message);
+      toast.error(t('contact.toastFailTitle'), message);
     } finally {
       setIsSubmitting(false);
     }
@@ -62,10 +64,10 @@ export function ContactPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Contact Us
+              {t('contact.title')}
             </h1>
             <p className="text-xl text-gray-700 max-w-2xl mx-auto">
-              Have a question or need assistance? We're here to help. Reach out to us through any of the channels below.
+              {t('contact.subtitle')}
             </p>
           </div>
 
@@ -75,10 +77,10 @@ export function ContactPage() {
               <div className="bg-blue-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                 <Phone className="h-8 w-8 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Phone</h3>
-              <p className="text-gray-600 mb-2">Call us during business hours</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{t('contact.phone')}</h3>
+              <p className="text-gray-600 mb-2">{t('contact.phoneHelp')}</p>
               <a href="tel:+15551234567" className="text-blue-600 font-medium hover:underline text-lg">
-                +1 (555) 123-4567
+                {t('contact.phoneValue')}
               </a>
             </div>
 
@@ -86,8 +88,8 @@ export function ContactPage() {
               <div className="bg-blue-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                 <Mail className="h-8 w-8 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Email</h3>
-              <p className="text-gray-600 mb-2">Send us an email anytime</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{t('contact.email')}</h3>
+              <p className="text-gray-600 mb-2">{t('contact.emailHelp')}</p>
               <a href="mailto:support@docmo.com" className="text-blue-600 font-medium hover:underline text-lg">
                 support@docmo.com
               </a>
@@ -97,8 +99,8 @@ export function ContactPage() {
               <div className="bg-blue-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                 <MapPin className="h-8 w-8 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Location</h3>
-              <p className="text-gray-600 mb-2">Visit our main office</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{t('contact.location')}</h3>
+              <p className="text-gray-600 mb-2">{t('contact.locationHelp')}</p>
               <p className="text-gray-900 font-medium">
                 123 Healthcare Ave<br />
                 Medical District, NY 10001
@@ -111,12 +113,12 @@ export function ContactPage() {
             <div className="flex items-start">
               <Clock className="h-6 w-6 text-blue-600 mr-3 mt-1" />
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Business Hours</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{t('contact.businessHours')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-gray-700">
-                  <div><span className="font-medium">Monday - Friday:</span> 8:00 AM - 6:00 PM</div>
-                  <div><span className="font-medium">Saturday:</span> 9:00 AM - 2:00 PM</div>
-                  <div><span className="font-medium">Sunday:</span> Closed</div>
-                  <div><span className="font-medium">Emergency:</span> 24/7 Available</div>
+                  <div><span className="font-medium">{t('contact.hours.weekdays')}</span> 8:00 AM - 6:00 PM</div>
+                  <div><span className="font-medium">{t('contact.hours.saturday')}</span> 9:00 AM - 2:00 PM</div>
+                  <div><span className="font-medium">{t('contact.hours.sunday')}</span> {t('contact.hours.closed')}</div>
+                  <div><span className="font-medium">{t('contact.hours.emergency')}</span> 24/7 {t('contact.hours.available')}</div>
                 </div>
               </div>
             </div>
@@ -125,7 +127,7 @@ export function ContactPage() {
           {/* Contact Form */}
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm p-8 max-w-3xl mx-auto">
             <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-              Send Us a Message
+              {t('contact.sendMessage')}
             </h2>
             {successMessage && <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-700">
                 {successMessage}
@@ -137,7 +139,7 @@ export function ContactPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name *
+                    {t('contact.form.fullName')}
                   </label>
                   <input
                     type="text"
@@ -147,13 +149,13 @@ export function ContactPage() {
                     value={formData.name}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="John Doe"
+                    placeholder={t('contact.form.fullNamePlaceholder')}
                   />
                 </div>
 
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address *
+                    {t('contact.form.email')}
                   </label>
                   <input
                     type="email"
@@ -163,7 +165,7 @@ export function ContactPage() {
                     value={formData.email}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="john@example.com"
+                    placeholder={t('contact.form.emailPlaceholder')}
                   />
                 </div>
               </div>
@@ -171,7 +173,7 @@ export function ContactPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number
+                    {t('contact.form.phone')}
                   </label>
                   <input
                     type="tel"
@@ -180,13 +182,13 @@ export function ContactPage() {
                     value={formData.phone}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder={t('contact.form.phonePlaceholder')}
                   />
                 </div>
 
                 <div>
                   <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
-                    Subject *
+                    {t('contact.form.subject')}
                   </label>
                   <select
                     id="subject"
@@ -196,19 +198,19 @@ export function ContactPage() {
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="">Select a subject</option>
-                    <option value="general">General Inquiry</option>
-                    <option value="appointment">Appointment Assistance</option>
-                    <option value="technical">Technical Support</option>
-                    <option value="billing">Billing Question</option>
-                    <option value="feedback">Feedback</option>
+                    <option value="">{t('contact.form.selectSubject')}</option>
+                    <option value="general">{t('contact.form.subjectOptions.general')}</option>
+                    <option value="appointment">{t('contact.form.subjectOptions.appointment')}</option>
+                    <option value="technical">{t('contact.form.subjectOptions.technical')}</option>
+                    <option value="billing">{t('contact.form.subjectOptions.billing')}</option>
+                    <option value="feedback">{t('contact.form.subjectOptions.feedback')}</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                  Message *
+                  {t('contact.form.message')}
                 </label>
                 <textarea
                   id="message"
@@ -218,7 +220,7 @@ export function ContactPage() {
                   onChange={handleChange}
                   rows={6}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  placeholder="Please describe how we can help you..."
+                  placeholder={t('contact.form.messagePlaceholder')}
                 />
               </div>
 
@@ -227,10 +229,10 @@ export function ContactPage() {
                 disabled={isSubmitting}
                 className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSubmitting ? 'Sending...' : (
+                {isSubmitting ? t('contact.sending') : (
                   <>
                     <Send className="h-5 w-5" />
-                    Send Message
+                    {t('contact.send')}
                   </>
                 )}
               </button>

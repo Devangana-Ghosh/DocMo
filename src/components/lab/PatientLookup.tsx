@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, User } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import i18n from '../../i18n';
 export interface Patient {
   id: string;
   name: string;
@@ -62,7 +63,7 @@ export function PatientLookup({
             </div>
           </div>
         </div> : <div className="relative">
-          <Input label="Search Patient" placeholder="Enter name or MRN..." value={searchTerm} onChange={e => {
+          <Input label={i18n.t('labUpload.searchPatient', { defaultValue: 'Search Patient' })} placeholder={i18n.t('labUpload.searchPatientPlaceholder', { defaultValue: 'Enter name or MRN...' })} value={searchTerm} onChange={e => {
         setSearchTerm(e.target.value);
         setShowResults(true);
       }} leftIcon={<Search className="h-5 w-5 text-gray-500" />} />
@@ -79,7 +80,7 @@ export function PatientLookup({
                       </p>
                     </div>
                   </button>) : <div className="p-8 text-center text-gray-500">
-                  No patients found matching "{searchTerm}"
+                  {i18n.t('labUpload.noPatientsFound', { search: searchTerm, defaultValue: 'No patients found matching "{{search}}"' })}
                 </div>}
             </div>}
         </div>}

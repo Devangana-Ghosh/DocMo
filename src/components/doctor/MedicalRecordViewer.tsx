@@ -1,4 +1,4 @@
-import React from 'react';
+import i18n from '../../i18n';
 import { X, FileText, Pill, History, CalendarClock, FlaskConical, Eye } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Patient } from './PatientCard';
@@ -58,7 +58,7 @@ export function MedicalRecordViewer({
                     <Pill className="h-6 w-6 text-teal-600" />
                     Prescriptions
                   </h3>
-                  {recentPrescriptions.length === 0 ? <p className="text-gray-500">No prescriptions found.</p> : <ul className="space-y-4">
+                  {recentPrescriptions.length === 0 ? <p className="text-gray-500">{i18n.t('documents.noPrescriptions', { defaultValue: 'No prescriptions found.' })}</p> : <ul className="space-y-4">
                       {recentPrescriptions.map((item) => <li key={item.id} className="pb-4 border-b border-gray-100 last:border-0">
                           <p className="font-bold text-lg">{item.medication_name}</p>
                           <p className="text-gray-600">{item.dosage} • {item.frequency} • {item.status}</p>
@@ -72,7 +72,7 @@ export function MedicalRecordViewer({
                     <History className="h-6 w-6 text-teal-600" />
                     Recent Visits
                   </h3>
-                  {recentAppointments.length === 0 ? <p className="text-gray-500">No appointments found.</p> : <ul className="space-y-4">
+                  {recentAppointments.length === 0 ? <p className="text-gray-500">{i18n.t('appointments.noRecent', { defaultValue: 'No appointments found.' })}</p> : <ul className="space-y-4">
                       {recentAppointments.map((item) => <li key={item.id} className="pb-4 border-b border-gray-100 last:border-0">
                           <div className="flex justify-between mb-1 gap-4">
                             <span className="font-bold truncate">{item.reason}</span>
@@ -90,7 +90,7 @@ export function MedicalRecordViewer({
                   <FileText className="h-6 w-6 text-teal-600" />
                   Documents
                 </h3>
-                {recentDocuments.length === 0 ? <p className="text-gray-500">No documents found.</p> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {recentDocuments.length === 0 ? <p className="text-gray-500">{i18n.t('documents.noDocuments', { defaultValue: 'No documents found.' })}</p> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {recentDocuments.map((doc) => <div key={doc.id} className="flex items-center p-4 border-2 border-gray-200 rounded-lg bg-white text-left">
                         <FileText className="h-8 w-8 text-gray-400 mr-3" />
                         <div className="min-w-0">
@@ -106,7 +106,7 @@ export function MedicalRecordViewer({
                   <FlaskConical className="h-6 w-6 text-teal-600" />
                   Lab Reports
                 </h3>
-                {recentLabReports.length === 0 ? <p className="text-gray-500">No lab reports found.</p> : <ul className="space-y-3">
+                {recentLabReports.length === 0 ? <p className="text-gray-500">{i18n.t('documents.noLabReports', { defaultValue: 'No lab reports found.' })}</p> : <ul className="space-y-3">
                     {recentLabReports.map((report) => <li key={report.id} className="rounded-lg border border-gray-200 p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -117,13 +117,13 @@ export function MedicalRecordViewer({
                             </p>
                             {report.notes ? <p className="mt-1 text-sm text-gray-700">{report.notes}</p> : null}
                           </div>
-                          <button
+                            <button
                             type="button"
                             onClick={() => void handleViewLabReport(report)}
                             className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                           >
                             <Eye className="h-4 w-4" />
-                            View
+                            {i18n.t('documents.view', { defaultValue: 'View' })}
                           </button>
                         </div>
                       </li>)}

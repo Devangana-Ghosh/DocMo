@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DoctorNavigation } from '../../components/DoctorNavigation';
 import { Footer } from '../../components/Footer';
 import { SkipLink } from '../../components/SkipLink';
@@ -11,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { Appointment, LabReport, MedicalDocument, Prescription } from '../../types/backend';
 
 export function PatientsPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -24,11 +26,15 @@ export function PatientsPage() {
     labReports: LabReport[];
   } | null>(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadPatients = async () => {
-      if (!profile) return;
-
+      if (!profile) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
       try {
         const data = await fetchDoctorPatients(profile.id);
         const mapped: Patient[] = data.map((patient) => {
@@ -44,14 +50,14 @@ export function PatientsPage() {
             status: 'Active',
           };
         });
-
         setPatients(mapped);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : 'Failed to load patients.');
+      } finally {
+        setLoading(false);
       }
     };
-
-    void loadPatients();
+    loadPatients();
   }, [profile]);
 
   const filteredPatients = patients.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.conditions.some(c => c.toLowerCase().includes(searchTerm.toLowerCase())));
@@ -75,44 +81,58 @@ export function PatientsPage() {
       setRecordLoading(false);
     }
   };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 font-sans text-gray-900">
+        <span className="text-xl text-gray-600">{t('patients.loading', 'Loading patients...')}</span>
+      </div>
+    );
+  }
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 font-sans text-gray-900">
+        <span className="text-xl text-red-600">{t('patients.noProfile', 'No doctor profile found.')}</span>
+      </div>
+    );
+  }
   return <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
-      <SkipLink />
-      <DoctorNavigation />
+    <SkipLink />
+    <DoctorNavigation />
 
-      <main id="main-content" className="outline-none py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                My Patients
-              </h1>
-              <p className="text-xl text-gray-600">
-                Manage patient records and medical histories.
-              </p>
-            </div>
-            <div className="w-full md:w-96">
-              <Input label="Search Patients" placeholder="Name, ID, or Condition" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="h-5 w-5 text-gray-500" />} className="mb-0" />
-            </div>
+    <main id="main-content" className="outline-none py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              {t('patients.title')}
+            </h1>
+            <p className="text-xl text-gray-600">
+              {t('patients.subtitle')}
+            </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {error && <div className="col-span-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-            {filteredPatients.map(patient => <PatientCard key={patient.id} patient={patient} onViewRecords={handleViewRecords} />)}
+          <div className="w-full md:w-96">
+            <Input label={t('patients.searchLabel')} placeholder={t('patients.searchPlaceholder')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="h-5 w-5 text-gray-500" />} className="mb-0" />
           </div>
-
-          {filteredPatients.length === 0 && <div className="text-center py-20 bg-white rounded-xl border-2 border-gray-200 border-dashed">
-              <p className="text-xl text-gray-500">
-                No patients found matching "{searchTerm}"
-              </p>
-            </div>}
         </div>
-      </main>
 
-      {selectedPatient && selectedRecord && <MedicalRecordViewer patient={selectedPatient} isOpen={isViewerOpen} onClose={() => setIsViewerOpen(false)} record={selectedRecord} />}
-      {selectedPatient && isViewerOpen && recordLoading && <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm">
-          <div className="rounded-lg bg-white px-6 py-4 shadow-lg text-gray-700">Loading medical record...</div>
-        </div>}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {error && <div className="col-span-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+          {filteredPatients.map(patient => <PatientCard key={patient.id} patient={patient} onViewRecords={handleViewRecords} />)}
+        </div>
 
-      <Footer />
-    </div>;
+        {filteredPatients.length === 0 && <div className="text-center py-20 bg-white rounded-xl border-2 border-gray-200 border-dashed">
+            <p className="text-xl text-gray-500">
+              {t('patients.noResults', { search: searchTerm, defaultValue: `No patients found matching "${searchTerm}"` })}
+            </p>
+          </div>}
+      </div>
+    </main>
+
+    {selectedPatient && selectedRecord && <MedicalRecordViewer patient={selectedPatient} isOpen={isViewerOpen} onClose={() => setIsViewerOpen(false)} record={selectedRecord} />}
+    {selectedPatient && isViewerOpen && recordLoading && <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm">
+        <div className="rounded-lg bg-white px-6 py-4 shadow-lg text-gray-700">{t('patients.loadingRecord', 'Loading medical record...')}</div>
+      </div>}
+
+    <Footer />
+  </div>;
 }

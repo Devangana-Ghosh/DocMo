@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Appointment, ContactMessage, LabReport, MedicalDocument, Prescription, Profile, UserRole } from '../types/backend';
+import type { Appointment, ContactMessage, DoctorAvailabilitySlot, LabReport, MedicalDocument, Prescription, Profile, UserRole } from '../types/backend';
 
 export class ApiError extends Error {
   constructor(message: string) {
@@ -224,6 +224,75 @@ export async function updateAppointmentStatus(id: string, status: Appointment['s
 
   if (error) throw new ApiError(error.message);
   return data as Appointment;
+}
+
+export async function fetchDoctorAvailabilitySchedule(doctorId: string) {
+  await requireSession();
+  const { data, error } = await supabase
+    .from('doctor_availability')
+    .select('*')
+    .eq('doctor_id', doctorId)
+    .order('day_of_week', { ascending: true })
+    .order('slot_time', { ascending: true });
+
+  if (error) throw new ApiError(error.message);
+  return (data ?? []) as DoctorAvailabilitySlot[];
+}
+
+export async function saveDoctorAvailabilitySchedule(doctorId: string, slots: Array<{ dayOfWeek: number; slotTime: string }>) {
+  await requireSession();
+
+  const { error: clearError } = await supabase
+    .from('doctor_availability')
+    .delete()
+    .eq('doctor_id', doctorId);
+
+  if (clearError) throw new ApiError(clearError.message);
+
+  if (!slots.length) return;
+
+  const payload = slots.map((item) => ({
+    doctor_id: doctorId,
+    day_of_week: item.dayOfWeek,
+    slot_time: item.slotTime,
+  }));
+
+  const { error: insertError } = await supabase
+    .from('doctor_availability')
+    .insert(payload);
+
+  if (insertError) throw new ApiError(insertError.message);
+}
+
+export async function fetchDoctorAvailabilityForDate(doctorId: string, date: string): Promise<string[] | null> {
+  await requireSession();
+  const dayOfWeek = new Date(`${date}T00:00:00`).getDay();
+
+  const { data, error } = await supabase
+    .from('doctor_availability')
+    .select('slot_time')
+    .eq('doctor_id', doctorId)
+    .eq('day_of_week', dayOfWeek)
+    .order('slot_time', { ascending: true });
+
+  if (error) throw new ApiError(error.message);
+
+  if ((data ?? []).length > 0) {
+    return (data ?? []).map((item: { slot_time: string }) => item.slot_time);
+  }
+
+  const { count, error: countError } = await supabase
+    .from('doctor_availability')
+    .select('id', { count: 'exact', head: true })
+    .eq('doctor_id', doctorId);
+
+  if (countError) throw new ApiError(countError.message);
+
+  if ((count ?? 0) === 0) {
+    return null;
+  }
+
+  return [];
 }
 
 export async function fetchPrescriptionsByPatient(patientId: string) {

@@ -6,6 +6,8 @@ type RequestBody = {
   role?: AssistantRole;
   message?: string;
   conversation?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  locale?: string;
+  appContext?: string;
 };
 
 type DrugContext = {
@@ -234,6 +236,13 @@ function roleInstructions(role: AssistantRole) {
   return 'You are a healthcare app assistant.';
 }
 
+function localeInstructions(locale?: string) {
+  if (!locale) return 'Respond in clear English.';
+  if (locale.startsWith('hi')) return 'Respond in Hindi unless user writes in another language.';
+  if (locale.startsWith('ta')) return 'Respond in Tamil unless user writes in another language.';
+  return 'Respond in clear English.';
+}
+
 function buildContextBlock(context: DrugContext) {
   const lines: string[] = [];
 
@@ -256,26 +265,9 @@ function buildContextBlock(context: DrugContext) {
   return lines.join('\n');
 }
 
-function isAppNavigationIntent(message: string) {
+function isDirectNavigationIntent(message: string) {
   const text = message.toLowerCase();
-  const appKeywords = [
-    'my prescriptions',
-    'prescriptions',
-    'my appointments',
-    'appointments',
-    'book appointment',
-    'find doctor',
-    'search doctor',
-    'documents',
-    'reports',
-    'dashboard',
-    'how to use',
-    'where is',
-    'open ',
-    'go to ',
-  ];
-
-  return appKeywords.some((keyword) => text.includes(keyword));
+  return text.includes('open ') || text.includes('go to ') || text.includes('navigate ') || text.includes('take me to ');
 }
 
 function navigationReply(role: AssistantRole, userMessage: string) {
@@ -333,6 +325,8 @@ async function tryOpenAiResponse(params: {
   userMessage: string;
   conversation: Array<{ role: 'user' | 'assistant'; content: string }>;
   context: DrugContext;
+  locale?: string;
+  appContext?: string;
 }) {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
   if (!apiKey) return null;
@@ -343,11 +337,15 @@ async function tryOpenAiResponse(params: {
   const messages = [
     {
       role: 'system',
-      content: `${roleInstructions(params.role)}\nRespond in concise bullet points when possible. Include a short disclaimer for medical uncertainty.`,
+      content: `${roleInstructions(params.role)}\n${localeInstructions(params.locale)}\nRespond in concise bullet points when possible. Include a short disclaimer for medical uncertainty.`,
     },
     {
       role: 'system',
       content: contextBlock || 'No external medication context could be extracted.',
+    },
+    {
+      role: 'system',
+      content: `Application context: ${params.appContext || 'No app context provided.'}`,
     },
     ...params.conversation.map((item) => ({ role: item.role, content: item.content })),
     { role: 'user', content: params.userMessage },
@@ -389,12 +387,14 @@ serve(async (req) => {
     const body = (await req.json()) as RequestBody;
     const role: AssistantRole = body.role ?? 'guest';
     const userMessage = body.message?.trim();
+    const locale = body.locale;
+    const appContext = body.appContext;
 
     if (!userMessage) {
       return json({ error: 'message is required' }, 400);
     }
 
-    if (isAppNavigationIntent(userMessage)) {
+    if (isDirectNavigationIntent(userMessage)) {
       return json({
         reply: navigationReply(role, userMessage),
         sources: ['App'],
@@ -410,6 +410,8 @@ serve(async (req) => {
       userMessage,
       conversation,
       context,
+      locale,
+      appContext,
     }).catch(() => null);
 
     const reply = llmReply ?? fallbackReply(role, context, userMessage);

@@ -1,17 +1,20 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Microscope, LogOut } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './ui/LanguageSwitcher';
 
 export function LabNavigation() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const navLinks = [{
-    name: 'Dashboard',
+    name: t('nav.dashboard'),
     href: '/lab/dashboard'
   }, {
-    name: 'Upload Report',
+    name: t('nav.uploadReport'),
     href: '/lab/upload'
   }, {
-    name: 'Report History',
+    name: t('nav.reportHistory'),
     href: '/lab/reports'
   }];
   const isActive = (path: string) => location.pathname === path;
@@ -21,7 +24,7 @@ export function LabNavigation() {
           {/* Logo Area */}
           <div className="flex-shrink-0 flex items-center gap-2">
             <Microscope className="h-8 w-8 text-purple-800" />
-            <Link to="/lab/dashboard" className="text-2xl font-bold text-purple-900 hover:underline focus:outline-none focus:ring-4 focus:ring-purple-500 rounded-lg px-2 py-1" aria-label="Laboratory Portal Home">
+            <Link to="/lab/dashboard" className="text-2xl font-bold text-purple-900 hover:underline focus:outline-none focus:ring-4 focus:ring-purple-500 rounded-lg px-2 py-1" aria-label={t('nav.labPortalHome')}>
               DoctMo <span className="text-purple-700 font-medium">Lab</span>
             </Link>
           </div>
@@ -39,6 +42,7 @@ export function LabNavigation() {
 
           {/* User Menu */}
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <div className="hidden md:block text-right">
               <p className="text-sm font-bold text-gray-900">Central Lab</p>
               <p className="text-xs text-gray-500">Technician</p>
@@ -47,10 +51,10 @@ export function LabNavigation() {
               type="button" 
               onClick={() => navigate('/login/lab')} 
               className="flex items-center gap-2 text-purple-800 hover:bg-purple-50 px-3 py-2 rounded-lg font-bold border-2 border-transparent hover:border-purple-200 focus:outline-none focus:ring-4 focus:ring-purple-500" 
-              aria-label="Log out"
+              aria-label={t('nav.logout')}
             >
               <LogOut className="h-5 w-5" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden sm:inline">{t('nav.logout')}</span>
             </button>
           </div>
         </div>

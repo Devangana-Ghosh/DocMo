@@ -1,23 +1,26 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Stethoscope, LogOut } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './ui/LanguageSwitcher';
 
 export function DoctorNavigation() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const navLinks = [{
-    name: 'Dashboard',
+    name: t('nav.dashboard'),
     href: '/doctor/dashboard'
   }, {
-    name: 'Patients',
+    name: t('nav.patients'),
     href: '/doctor/patients'
   }, {
-    name: 'Appointments',
+    name: t('nav.appointments'),
     href: '/doctor/appointments'
   }, {
-    name: 'Availability',
+    name: t('nav.availability'),
     href: '/doctor/availability'
   }, {
-    name: 'Prescriptions',
+    name: t('nav.prescriptions'),
     href: '/doctor/prescriptions'
   }];
   const isActive = (path: string) => location.pathname === path;
@@ -27,7 +30,7 @@ export function DoctorNavigation() {
           {/* Logo Area */}
           <div className="flex-shrink-0 flex items-center gap-2">
             <Stethoscope className="h-8 w-8 text-teal-800" />
-            <Link to="/doctor/dashboard" className="text-2xl font-bold text-teal-900 hover:underline focus:outline-none focus:ring-4 focus:ring-teal-500 rounded-lg px-2 py-1" aria-label="Doctor Portal Home">
+            <Link to="/doctor/dashboard" className="text-2xl font-bold text-teal-900 hover:underline focus:outline-none focus:ring-4 focus:ring-teal-500 rounded-lg px-2 py-1" aria-label={t('nav.doctorPortalHome')}>
               DoctMo <span className="text-teal-700 font-medium">Doctor</span>
             </Link>
           </div>
@@ -45,6 +48,7 @@ export function DoctorNavigation() {
 
           {/* User Menu */}
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <div className="hidden md:block text-right">
               <p className="text-sm font-bold text-gray-900">
                 Dr. Sarah Wilson
@@ -55,10 +59,10 @@ export function DoctorNavigation() {
               type="button" 
               onClick={() => navigate('/login/doctor')} 
               className="flex items-center gap-2 text-teal-800 hover:bg-teal-50 px-3 py-2 rounded-lg font-bold border-2 border-transparent hover:border-teal-200 focus:outline-none focus:ring-4 focus:ring-teal-500" 
-              aria-label="Log out"
+              aria-label={t('nav.logout')}
             >
               <LogOut className="h-5 w-5" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden sm:inline">{t('nav.logout')}</span>
             </button>
           </div>
         </div>

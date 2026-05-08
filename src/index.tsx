@@ -1,4 +1,5 @@
 import './index.css';
+import './i18n';
 import { render } from "react-dom";
 import { App } from "./App";
 

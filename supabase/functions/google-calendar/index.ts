@@ -1,5 +1,7 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 
+const SHARED_MEET_LINK = 'https://meet.google.com/yun-buuh-hfr';
+
 type Mode = 'availability' | 'create-event';
 
 type RequestBody = {
@@ -89,19 +91,14 @@ async function createMeetEvent(body: RequestBody) {
     },
     body: JSON.stringify({
       summary: `DocMo consultation: ${body.patientName} with ${body.doctorName}`,
-      description: 'Consultation scheduled through DocMo',
+      description: `Consultation scheduled through DocMo\nJoin meeting: ${SHARED_MEET_LINK}`,
+      location: SHARED_MEET_LINK,
       start: { dateTime: start },
       end: { dateTime: end },
       attendees: [
         ...(body.doctorEmail ? [{ email: body.doctorEmail }] : []),
         ...(body.patientEmail ? [{ email: body.patientEmail }] : []),
       ],
-      conferenceData: {
-        createRequest: {
-          requestId: crypto.randomUUID(),
-          conferenceSolutionKey: { type: 'hangoutsMeet' },
-        },
-      },
     }),
   });
 
@@ -110,9 +107,8 @@ async function createMeetEvent(body: RequestBody) {
     throw new Error(`Google Calendar event creation failed: ${response.status} ${text}`);
   }
 
-  const payload = await response.json() as { hangoutLink?: string; conferenceData?: { entryPoints?: Array<{ uri?: string }> } };
-  const meetingLink = payload.hangoutLink ?? payload.conferenceData?.entryPoints?.find((entry) => entry.uri)?.uri;
-  return { meetingLink };
+  await response.json();
+  return { meetingLink: SHARED_MEET_LINK };
 }
 
 async function fetchAvailability(body: RequestBody) {

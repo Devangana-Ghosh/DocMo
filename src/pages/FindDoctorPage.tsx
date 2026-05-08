@@ -13,7 +13,9 @@ import type { Profile } from '../types/backend';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchDoctorAvailability, lookupDoctorInNpiRegistry } from '../services/integrations';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 export function FindDoctorPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const { profile, loading: authLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,7 +81,7 @@ export function FindDoctorPage() {
 
         setDoctors(enriched);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load doctors.');
+        setError(loadError instanceof Error ? loadError.message : t('findDoctor.loadError'));
       } finally {
         setLoading(false);
       }
@@ -109,19 +111,19 @@ export function FindDoctorPage() {
   });
   const specialties = [{
     value: 'cardiology',
-    label: 'Cardiology'
+    label: t('findDoctor.specialties.cardiology')
   }, {
     value: 'dermatology',
-    label: 'Dermatology'
+    label: t('findDoctor.specialties.dermatology')
   }, {
     value: 'pediatrics',
-    label: 'Pediatrics'
+    label: t('findDoctor.specialties.pediatrics')
   }, {
     value: 'orthopedics',
-    label: 'Orthopedics'
+    label: t('findDoctor.specialties.orthopedics')
   }, {
     value: 'general',
-    label: 'General Practice'
+    label: t('findDoctor.specialties.general')
   }];
   return <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       <SkipLink />
@@ -131,30 +133,28 @@ export function FindDoctorPage() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-10">
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-              Find a Doctor
+              {t('findDoctor.title')}
             </h1>
             <p className="text-xl text-gray-700 max-w-3xl">
-              Search through our network of verified specialists. Filter by
-              specialty, location, or availability to find the right care for
-              you.
+              {t('findDoctor.subtitle')}
             </p>
           </div>
 
           {/* Search Section */}
           <section className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-sm mb-12" aria-labelledby="search-heading">
             <h2 id="search-heading" className="sr-only">
-              Search Filters
+              {t('findDoctor.searchFilters')}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
               <div className="md:col-span-5">
-                <Input label="Search by name or condition" placeholder="e.g. Dr. Smith or Back pain" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="w-5 h-5 text-gray-500" />} />
+                <Input label={t('findDoctor.searchBy')} placeholder={t('findDoctor.searchPlaceholder')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="w-5 h-5 text-gray-500" />} />
               </div>
               <div className="md:col-span-4">
-                <Select label="Specialty" options={specialties} value={specialty} onChange={e => setSpecialty(e.target.value)} />
+                <Select label={t('findDoctor.specialty')} options={specialties} value={specialty} onChange={e => setSpecialty(e.target.value)} />
               </div>
               <div className="md:col-span-3 mb-6">
                 <Button className="w-full" size="lg" type="button">
-                  Search Doctors
+                  {t('findDoctor.searchDoctors')}
                 </Button>
               </div>
             </div>
@@ -164,20 +164,20 @@ export function FindDoctorPage() {
           <section aria-label="Search Results">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
-                {filteredDoctors.length} Doctors Available
+                {t('findDoctor.resultsCount', { count: filteredDoctors.length })}
               </h2>
               <div className="flex items-center gap-2">
-                <span className="text-gray-700 font-medium">Sort by:</span>
+                <span className="text-gray-700 font-medium">{t('findDoctor.sortBy')}</span>
                 <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="bg-white border-2 border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:border-blue-800 focus:ring-4 focus:ring-yellow-400" aria-label="Sort doctors">
-                  <option value="availability">Availability</option>
-                  <option value="rating">Rating</option>
-                  <option value="price">Price: Low to High</option>
+                  <option value="availability">{t('findDoctor.sort.availability')}</option>
+                  <option value="rating">{t('findDoctor.sort.rating')}</option>
+                  <option value="price">{t('findDoctor.sort.price')}</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-6">
-              {loading && <div className="text-lg text-gray-600">Loading doctors...</div>}
+              {loading && <div className="text-lg text-gray-600">{t('findDoctor.loading')}</div>}
               {!loading && error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
               {!loading && !error && filteredDoctors.map(doctor => <DoctorCard key={doctor.id} doctor={doctor} />)}
             </div>

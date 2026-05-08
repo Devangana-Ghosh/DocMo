@@ -12,8 +12,10 @@ import { Button } from '../../components/ui/Button';
 import { Send, CheckCircle } from 'lucide-react';
 import { fetchProfilesByRole, uploadLabReport } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export function UploadReportPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -39,7 +41,7 @@ export function UploadReportPage() {
         }));
         setPatients(mapped);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load patients.');
+        setError(loadError instanceof Error ? loadError.message : t('labUpload.loadPatientsError'));
       }
     };
 
@@ -72,7 +74,7 @@ export function UploadReportPage() {
           setNotes('');
         }, 3000);
       } catch (uploadError) {
-        setError(uploadError instanceof Error ? uploadError.message : 'Failed to upload report.');
+        setError(uploadError instanceof Error ? uploadError.message : t('labUpload.uploadError'));
       } finally {
         setSubmitting(false);
       }
@@ -86,10 +88,10 @@ export function UploadReportPage() {
         <div className="max-w-5xl mx-auto">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Upload Lab Report
+              {t('labUpload.title')}
             </h1>
             <p className="text-xl text-gray-600">
-              Upload diagnostic test results and assign to patient records.
+              {t('labUpload.subtitle')}
             </p>
           </div>
 
@@ -102,18 +104,17 @@ export function UploadReportPage() {
                 </div>
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Report Uploaded Successfully!
+                {t('labUpload.successTitle')}
               </h2>
               <p className="text-xl text-gray-600 mb-8">
-                The report has been securely uploaded and linked to{' '}
-                {selectedPatient?.name}'s medical record.
+                {t('labUpload.successMessage', { name: selectedPatient?.name ?? '' })}
               </p>
               <div className="flex justify-center gap-4">
                 <Button onClick={() => setIsUploaded(false)} className="bg-purple-700 hover:bg-purple-800 border-purple-700">
-                  Upload Another
+                  {t('labUpload.uploadAnother')}
                 </Button>
                 <Button variant="outline" onClick={() => navigate('/lab/reports')}>
-                  View Reports
+                  {t('labUpload.viewReports')}
                 </Button>
               </div>
             </div> : <form onSubmit={handleSubmit} className="space-y-8">
@@ -121,41 +122,41 @@ export function UploadReportPage() {
 
               <div className="bg-white rounded-xl border-2 border-gray-200 p-8 shadow-sm">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                  Test Details
+                  {t('labUpload.testDetails')}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Select label="Test Type" options={[{
+                  <Select label={t('labUpload.testType')} options={[{
                 value: 'cbc',
-                label: 'Complete Blood Count (CBC)'
+                label: t('labUpload.testOptions.cbc')
               }, {
                 value: 'lipid',
-                label: 'Lipid Panel'
+                label: t('labUpload.testOptions.lipid')
               }, {
                 value: 'thyroid',
-                label: 'Thyroid Function Test'
+                label: t('labUpload.testOptions.thyroid')
               }, {
                 value: 'glucose',
-                label: 'Glucose Test'
+                label: t('labUpload.testOptions.glucose')
               }, {
                 value: 'urinalysis',
-                label: 'Urinalysis'
+                label: t('labUpload.testOptions.urinalysis')
               }, {
                 value: 'xray',
-                label: 'X-Ray'
+                label: t('labUpload.testOptions.xray')
               }, {
                 value: 'mri',
-                label: 'MRI Scan'
+                label: t('labUpload.testOptions.mri')
               }, {
                 value: 'other',
-                label: 'Other'
+                label: t('labUpload.testOptions.other')
               }]} value={testType} onChange={e => setTestType(e.target.value)} required />
-                  <Input label="Test Date" type="date" value={testDate} onChange={(event) => setTestDate(event.target.value)} required />
+                  <Input label={t('labUpload.testDate')} type="date" value={testDate} onChange={(event) => setTestDate(event.target.value)} required />
                 </div>
                 <div className="mt-6">
                   <label className="block text-lg font-bold text-gray-900 mb-2">
-                    Additional Notes (Optional)
+                    {t('labUpload.notesOptional')}
                   </label>
-                  <textarea className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:ring-4 focus:ring-yellow-400 min-h-[100px]" placeholder="Any special observations or notes about the test..." value={notes} onChange={(event) => setNotes(event.target.value)}></textarea>
+                  <textarea className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-800 focus:ring-4 focus:ring-yellow-400 min-h-[100px]" placeholder={t('labUpload.notesPlaceholder')} value={notes} onChange={(event) => setNotes(event.target.value)}></textarea>
                 </div>
               </div>
 
@@ -169,10 +170,10 @@ export function UploadReportPage() {
               setTestDate('');
               setNotes('');
             }}>
-                  Clear Form
+                  {t('labUpload.clearForm')}
                 </Button>
                 <Button type="submit" isLoading={submitting} disabled={!selectedFile || !selectedPatient || !testType || !testDate} className="bg-purple-700 hover:bg-purple-800 border-purple-700" leftIcon={<Send className="h-5 w-5" />}>
-                  Upload Report
+                  {t('labUpload.uploadReport')}
                 </Button>
               </div>
             </form>}
